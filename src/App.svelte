@@ -313,41 +313,6 @@
     };
   });
 
-  /**
-   * Unfreeze the composer's height on the first load after a server start.
-   *
-   * The composer sizes its editor by measuring `scrollHeight` and writing the answer
-   * back as an inline `height`. Something makes that first measurement come back at the
-   * auto-grow ceiling, and an EMPTY composer opens 200px tall — pushing the empty state
-   * up until the saucer is cropped by the top of the transcript.
-   *
-   * WHAT IT IS NOT: the import order of the stylesheet. That was the first diagnosis and
-   * it was wrong — with `styles.css` imported first AND the mount deferred until
-   * `--aparte-space-unit` resolves, the editor still came back 200px tall. The rules are
-   * live when it measures; something else is.
-   *
-   * So this treats the symptom, deliberately and narrowly: ONCE, after mount, if the
-   * composer is empty and carries a frozen height, drop the inline value and let the
-   * stylesheet answer (44px). `reset()` does not recompute it — only deleting it does.
-   * Guarded on the composer being empty so it can never fight the auto-grow of someone
-   * typing a long message, and it never runs again.
-   *
-   * Temporary: aparté is looking into it. Delete this whole block when a release fixes
-   * it, and check the first load after a server start rather than a reload — a reload
-   * never showed the bug, which is how it hid for so long.
-   */
-  $effect(() => {
-    const composer = document.querySelector('aparte-composer');
-    const editor = composer?.querySelector<HTMLElement>('.aparte-ci-editor');
-    if (!editor) return;
-
-    const frame = requestAnimationFrame(() => {
-      const empty = (editor.textContent ?? '').trim() === '';
-      if (empty && editor.style.height) editor.style.removeProperty('height');
-    });
-    return () => cancelAnimationFrame(frame);
-  });
-
   // ─── Boot: the OAuth round trip, and the session we may already have ───────
 
   $effect(() => {
@@ -390,28 +355,30 @@
    * Until the scenario has written files there is nothing on that side but the words
    * "no signal", and a panel that says nothing is a panel that costs half the window to
    * say it. So the chat opens full width and the preview arrives at the moment it has
-   * something — which is a moment the SCENARIO decides, not a timer and not a count of
-   * replies: `generate_files` is the only thing that ever calls `build()`.
+   * something — a moment the SCENARIO decides, not a timer and not a count of replies:
+   * `generate_files` is the only thing that ever calls `build()`.
    *
-   * `position: 100` rather than unmounting the pane. Moving the chat between two parents
-   * would destroy and rebuild it, and the transcript with it — the one thing this
-   * product cannot afford to lose mid-run. At 100 the pane and the seam measure 0px;
-   * verified in a browser rather than assumed.
+   * `single` does the hiding, as of 0.16.5 (apartejs/aparte#54). Before it there was no
+   * way to ask for one pane above the breakpoint, and this file carried a workaround:
+   * position 100 plus a lifted `--aparte-split-max`, the seam hidden by hand, and
+   * `disabled` set as a property because Svelte drops an empty-string attribute. All of
+   * that is gone. What has NOT changed is that the pane stays mounted — moving the chat
+   * between two parents would destroy it, and the transcript with it.
    */
   let previewReady = $state(false);
-  const splitPosition = $derived(previewReady ? openPosition : '100');
 
   /**
-   * `disabled` as a property, not an attribute in the markup.
+   * `single` as a PROPERTY, not an attribute in the markup.
    *
-   * The element types it as the empty-string HTML boolean, and Svelte drops `''` rather
-   * than writing the attribute — so the seam stayed live at position 100, a 0px-wide tab
-   * stop that a stray drag could pull a "no signal" pane open with. Setting the property
-   * on the instance is the form that actually lands.
+   * It is an HTML boolean — present or absent — and Svelte writes nothing for an empty
+   * string, so `single={previewReady ? undefined : ''}` left the element without it and
+   * the empty preview stayed on screen. Measured, not assumed: `singleAttr: false` on a
+   * fresh load. Setting the property on the instance is the form that lands, and it is
+   * the same shape the old `disabled` workaround needed for the same reason.
    */
   $effect(() => {
-    const element = splitElement as (HTMLElement & { disabled?: boolean }) | null;
-    if (element) element.disabled = !previewReady;
+    const element = splitElement as (HTMLElement & { single?: boolean }) | null;
+    if (element) element.single = !previewReady;
   });
 
   let splitElement = $state<HTMLElement | null>(null);
@@ -601,8 +568,8 @@
 
     <aparte-split
       bind:this={splitElement}
-      class:shell__split--solo={!previewReady}
-      position={splitPosition}
+      pane="start"
+      position={openPosition}
       breakpoint="60rem"
       label={t.shell.splitLabel}
     >
@@ -905,30 +872,6 @@
      a lit vertebra in the middle that is the thing the hand aims at. It lights
      in the thruster colour while it is being dragged, which is the palette's rule
      — orange means live — applied to the only control that moves the layout. */
-
-  /*
-   * The chat alone, until the preview has something.
-   *
-   * `position: 100` is not enough on its own: the element clamps the primary pane to
-   * `--aparte-split-max`, 60% by default, so asking for 100 rendered 60 and left the
-   * empty pane holding 40% of the window. Lifting the ceiling is what makes the ask
-   * land — measured in a browser, after a first reading that mistook a lifted ceiling
-   * for no ceiling at all.
-   */
-  .shell__split--solo {
-    --aparte-split-max: 100%;
-  }
-
-  /* The seam is 6px of nothing while the pane behind it is 0px wide. Hidden rather than
-     sized to zero, so it also stops being a target.
-     `--aparte-split-min` is deliberately NOT touched here: it floors the PRIMARY pane,
-     never the empty one, so the end pane reaches 0px with it left alone. Setting it to a
-     bare `0` — no unit — invalidates the `minmax()` the element's grid is built from, and
-     the whole split collapses into a single stacked column. Seen on screen, and the
-     reason this comment exists. */
-  .shell__split--solo :global(.aparte-split__handle) {
-    display: none;
-  }
 
   .shell :global(.aparte-split__handle),
   .shell :global(.aparte-split__handle:hover),
