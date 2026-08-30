@@ -106,6 +106,10 @@
     const space = generateSpace({ ...config });
     latest = space;
     files = space.files;
+    // The preview has something to show from here on, so the pane opens. One way only:
+    // once the Space exists, hiding it again would be the product taking back a thing
+    // the person is in the middle of watching.
+    previewReady = true;
     return space;
   }
 
@@ -343,7 +347,37 @@
   }
 
   /** Read once: re-reading it during the session would fight the person dragging it. */
-  const splitPosition = storedSplit();
+  const openPosition = storedSplit();
+
+  /**
+   * The preview pane earns its half of the screen; it does not start with it.
+   *
+   * Until the scenario has written files there is nothing on that side but the words
+   * "no signal", and a panel that says nothing is a panel that costs half the window to
+   * say it. So the chat opens full width and the preview arrives at the moment it has
+   * something — which is a moment the SCENARIO decides, not a timer and not a count of
+   * replies: `generate_files` is the only thing that ever calls `build()`.
+   *
+   * `position: 100` rather than unmounting the pane. Moving the chat between two parents
+   * would destroy and rebuild it, and the transcript with it — the one thing this
+   * product cannot afford to lose mid-run. At 100 the pane and the seam measure 0px;
+   * verified in a browser rather than assumed.
+   */
+  let previewReady = $state(false);
+  const splitPosition = $derived(previewReady ? openPosition : '100');
+
+  /**
+   * `disabled` as a property, not an attribute in the markup.
+   *
+   * The element types it as the empty-string HTML boolean, and Svelte drops `''` rather
+   * than writing the attribute — so the seam stayed live at position 100, a 0px-wide tab
+   * stop that a stray drag could pull a "no signal" pane open with. Setting the property
+   * on the instance is the form that actually lands.
+   */
+  $effect(() => {
+    const element = splitElement as (HTMLElement & { disabled?: boolean }) | null;
+    if (element) element.disabled = !previewReady;
+  });
 
   let splitElement = $state<HTMLElement | null>(null);
 
@@ -494,20 +528,25 @@
            a 19px-tall control, which is right for a dense desktop bar and wrong for the
            one control that exists ONLY on a phone: this is how a visitor moves between
            the chat and the preview, and it was a 19px target under a thumb. -->
-      <div class="aparte-btn-group shell__panes" role="group" aria-label={t.header.panesLabel}>
-        <button
-          class="aparte-btn aparte-btn--surface"
-          type="button"
-          aria-pressed={visiblePane === 'start'}
-          data-aparte-split-pane="start">{t.header.paneChat}</button
-        >
-        <button
-          class="aparte-btn aparte-btn--surface"
-          type="button"
-          aria-pressed={visiblePane === 'end'}
-          data-aparte-split-pane="end">{t.header.panePreview}</button
-        >
-      </div>
+      <!-- Hidden until there is a preview: while stacked, `position` means nothing and it
+           is `pane` that decides, so these buttons would happily switch a phone to a pane
+           holding "no signal". They appear with the preview, for the same reason. -->
+      {#if previewReady}
+        <div class="aparte-btn-group shell__panes" role="group" aria-label={t.header.panesLabel}>
+          <button
+            class="aparte-btn aparte-btn--surface"
+            type="button"
+            aria-pressed={visiblePane === 'start'}
+            data-aparte-split-pane="start">{t.header.paneChat}</button
+          >
+          <button
+            class="aparte-btn aparte-btn--surface"
+            type="button"
+            aria-pressed={visiblePane === 'end'}
+            data-aparte-split-pane="end">{t.header.panePreview}</button
+          >
+        </div>
+      {/if}
     </div>
   </header>
 
@@ -527,6 +566,7 @@
 
     <aparte-split
       bind:this={splitElement}
+      class:shell__split--solo={!previewReady}
       position={splitPosition}
       breakpoint="60rem"
       label={t.shell.splitLabel}
@@ -825,6 +865,30 @@
      a lit vertebra in the middle that is the thing the hand aims at. It lights
      in the thruster colour while it is being dragged, which is the palette's rule
      — orange means live — applied to the only control that moves the layout. */
+
+  /*
+   * The chat alone, until the preview has something.
+   *
+   * `position: 100` is not enough on its own: the element clamps the primary pane to
+   * `--aparte-split-max`, 60% by default, so asking for 100 rendered 60 and left the
+   * empty pane holding 40% of the window. Lifting the ceiling is what makes the ask
+   * land — measured in a browser, after a first reading that mistook a lifted ceiling
+   * for no ceiling at all.
+   */
+  .shell__split--solo {
+    --aparte-split-max: 100%;
+  }
+
+  /* The seam is 6px of nothing while the pane behind it is 0px wide. Hidden rather than
+     sized to zero, so it also stops being a target.
+     `--aparte-split-min` is deliberately NOT touched here: it floors the PRIMARY pane,
+     never the empty one, so the end pane reaches 0px with it left alone. Setting it to a
+     bare `0` — no unit — invalidates the `minmax()` the element's grid is built from, and
+     the whole split collapses into a single stacked column. Seen on screen, and the
+     reason this comment exists. */
+  .shell__split--solo :global(.aparte-split__handle) {
+    display: none;
+  }
 
   .shell :global(.aparte-split__handle),
   .shell :global(.aparte-split__handle:hover),
