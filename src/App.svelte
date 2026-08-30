@@ -368,13 +368,23 @@
   let previewReady = $state(false);
 
   /**
-   * `single` as a PROPERTY, not an attribute in the markup.
+   * `single` set as a PROPERTY, and the reason is not the one it looks like.
    *
-   * It is an HTML boolean — present or absent — and Svelte writes nothing for an empty
-   * string, so `single={previewReady ? undefined : ''}` left the element without it and
-   * the empty preview stayed on screen. Measured, not assumed: `singleAttr: false` on a
-   * fresh load. Setting the property on the instance is the form that lands, and it is
-   * the same shape the old `disabled` workaround needed for the same reason.
+   * The library types presence attributes as `'' | null | undefined` on purpose: React
+   * and Vue stringify whatever a template sets on a custom element, so `single={false}`
+   * would render `single="false"` and an element testing `hasAttribute` would read that
+   * as ON. Writing `''` is the prescribed spelling, and it is right — for those two.
+   *
+   * Svelte 5 does not take that path. It writes the PROPERTY whenever the element has
+   * one, and only falls back to `setAttribute` when it does not. `aparte-split` exposes
+   * `single` as an accessor, so the template assigns `''` to it, the setter coerces an
+   * empty string to `false`, and the attribute is removed — the exact opposite of what
+   * was asked. Measured side by side on the same element: `data-probe-empty={''}`, which
+   * has no matching property, came through as `""`; `single={''}` came through as
+   * `single === false`.
+   *
+   * So the property is the only spelling that lands here, and `!previewReady` is a real
+   * boolean rather than the string the types ask for.
    */
   $effect(() => {
     const element = splitElement as (HTMLElement & { single?: boolean }) | null;
