@@ -1,18 +1,8 @@
 import { mount } from 'svelte';
 
-// THE STYLESHEET FIRST, and the order is load-bearing rather than tidy.
-//
-// Importing the package registers the <aparte-*> custom elements, and the composer sizes
-// its editor by measuring `scrollHeight` and writing the answer back as an inline
-// `height`. Measured before the stylesheet lands, the editor is stretched by its parent,
-// the measurement comes back at the auto-grow ceiling, and an EMPTY composer is frozen at
-// 200px tall — a `height: 200px` that no reflow takes back.
-//
-// In dev that is a real race: Vite injects CSS from JavaScript, so `styles.css` used to
-// arrive after the elements it styles. It showed up on the very first load after a server
-// start and vanished on every reload afterwards, which is what made it look like an HMR
-// artefact — it was the opposite. The production build links the CSS in <head> and never
-// showed it. Importing the stylesheet first closes the window in both.
+// The stylesheet before the package: the elements it styles are registered by that second
+// import, so this is the order that gives them their rules first. It is tidiness, not a
+// fix — see the composer note in `App.svelte`, and what it took to find that out.
 import '@aparte/core/styles.css';
 import '@aparte/core';
 

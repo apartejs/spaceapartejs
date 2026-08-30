@@ -313,6 +313,41 @@
     };
   });
 
+  /**
+   * Unfreeze the composer's height on the first load after a server start.
+   *
+   * The composer sizes its editor by measuring `scrollHeight` and writing the answer
+   * back as an inline `height`. Something makes that first measurement come back at the
+   * auto-grow ceiling, and an EMPTY composer opens 200px tall — pushing the empty state
+   * up until the saucer is cropped by the top of the transcript.
+   *
+   * WHAT IT IS NOT: the import order of the stylesheet. That was the first diagnosis and
+   * it was wrong — with `styles.css` imported first AND the mount deferred until
+   * `--aparte-space-unit` resolves, the editor still came back 200px tall. The rules are
+   * live when it measures; something else is.
+   *
+   * So this treats the symptom, deliberately and narrowly: ONCE, after mount, if the
+   * composer is empty and carries a frozen height, drop the inline value and let the
+   * stylesheet answer (44px). `reset()` does not recompute it — only deleting it does.
+   * Guarded on the composer being empty so it can never fight the auto-grow of someone
+   * typing a long message, and it never runs again.
+   *
+   * Temporary: aparté is looking into it. Delete this whole block when a release fixes
+   * it, and check the first load after a server start rather than a reload — a reload
+   * never showed the bug, which is how it hid for so long.
+   */
+  $effect(() => {
+    const composer = document.querySelector('aparte-composer');
+    const editor = composer?.querySelector<HTMLElement>('.aparte-ci-editor');
+    if (!editor) return;
+
+    const frame = requestAnimationFrame(() => {
+      const empty = (editor.textContent ?? '').trim() === '';
+      if (empty && editor.style.height) editor.style.removeProperty('height');
+    });
+    return () => cancelAnimationFrame(frame);
+  });
+
   // ─── Boot: the OAuth round trip, and the session we may already have ───────
 
   $effect(() => {
@@ -591,7 +626,12 @@
              needs to be — the invitation IS the interface. -->
         <div class="entry" slot="empty-state">
           <div class="entry__ship" class:is-waiting={arriving}>
-            <Saucer state={saucer} size="min(46vmin, 208px)" />
+            <!-- `22vh` is the term that matters, and it was missing: the other two
+                 measure the WIDTH of things, so on a short window the ship kept its
+                 208px, the block grew past the transcript, and `--auto-center` centred
+                 an oversized child — which crops it at BOTH ends. The dome went off the
+                 top of the screen. Seen at 1280x720, an ordinary laptop. -->
+            <Saucer state={saucer} size="min(46vmin, 208px, 22vh)" />
           </div>
           <p class="entry__lede">{t.shell.lede}</p>
           <p class="entry__text">{copy.entry.emptyState}</p>
@@ -950,6 +990,24 @@
   .entry__ship.is-waiting {
     opacity: 0;
     transition: none;
+  }
+
+  /*
+   * A short window: give the words the room the ship was taking.
+   *
+   * The block is centred by the container, so anything it cannot fit is cut off the top
+   * and the bottom at once rather than scrolled to. Tightening here is what keeps the
+   * headline whole on a laptop turned landscape, or a browser with three toolbars.
+   */
+  @media (max-height: 46rem) {
+    .entry {
+      gap: 0.6rem;
+      padding-block: 0.5rem 0.25rem;
+    }
+
+    .entry__lede {
+      font-size: clamp(1.5rem, 5vh, 2.25rem);
+    }
   }
 
   .entry__lede {
