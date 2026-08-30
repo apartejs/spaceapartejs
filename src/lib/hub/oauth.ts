@@ -40,11 +40,19 @@ import type { HubUser } from './types';
  *
  * `openid profile` is what gives us a username to show.
  *
+ * TWO repo scopes, because this product does two different things with a Space.
+ * `contribute-repos` is the one that says CREATE — "create and manage repos created by
+ * this app only", which is exactly `createRepo` and nothing wider. `write-repos` is for
+ * the second push onto a Space that already exists, possibly made by hand rather than by
+ * us. `manage-repos` would cover both and is refused on purpose: it grants full
+ * management of every repository the person owns, to a tool that writes two files.
+ *
  * `inference-api` is deliberately absent: v1 generates browser/ONNX Spaces only, so
  * neither the configurator nor the Space it writes ever calls inference on the user's
  * behalf. Asking for a scope we do not use is a consent screen we cannot justify.
  */
-export const SPACE_OAUTH_SCOPES = 'openid profile read-repos write-repos';
+export const SPACE_OAUTH_SCOPES =
+  'openid profile read-repos write-repos contribute-repos';
 
 /** Bump the suffix rather than migrating: a stale session is only a re-login. */
 const STORAGE_KEY = 'aparte-spaces:hf-session:v1';
