@@ -9,17 +9,17 @@ importers:
   .:
     dependencies:
       '@aparte/core':
-        specifier: 0.16.2
-        version: 0.16.2
+        specifier: 0.16.3
+        version: 0.16.3
       '@aparte/locale-fr':
-        specifier: 0.16.2
-        version: 0.16.2(@aparte/core@0.16.2)
+        specifier: 0.16.3
+        version: 0.16.3(@aparte/core@0.16.3)
       '@aparte/provider-scenario':
-        specifier: 0.16.2
-        version: 0.16.2(@aparte/core@0.16.2)
+        specifier: 0.16.3
+        version: 0.16.3(@aparte/core@0.16.3)
       '@aparte/svelte':
-        specifier: 0.16.2
-        version: 0.16.2(@aparte/core@0.16.2)(svelte@5.57.0)
+        specifier: 0.16.3
+        version: 0.16.3(@aparte/core@0.16.3)(svelte@5.57.0)
       '@huggingface/hub':
         specifier: ^2.11.2
         version: 2.16.1
@@ -57,12 +57,12 @@ packages:
   '@acemir/cssom@0.9.31':
     resolution: {integrity: sha512-ZnR3GSaH+/vJ0YlHau21FjfLYjMpYVIzTD8M8vIEQvIGxeOXyXdzCI140rrCY862p/C/BbzWsjc1dgnM9mkoTA==}
 
-  '@aparte/core@0.16.2':
-    resolution: {integrity: sha512-YQL8A7mlZl28GllmVzDvvy95+xz1/Kcj/zolNrqsYmOQUBSjICfT4dbpFBObNo2+rMfHHN4/jtrpQyM4lqaqog==}
+  '@aparte/core@0.16.3':
+    resolution: {integrity: sha512-DrbIBtT5LIZvi8MT/DiJ/W49R96yZtA1juLsI8gYTfdlz/vH+MFSpLj66BhQzraj2AvMb6x0hDi5aAC/U9wU1g==}
     engines: {node: '>=18'}
 
-  '@aparte/engine@0.16.2':
-    resolution: {integrity: sha512-8BGfeJbPM7+XoFTUfS57EuDiFDUzO12EdgDzqg1Io8Ums9106vjI5JdtLjMG3+v+VldP/6LKq3Fqje209wetCg==}
+  '@aparte/engine@0.16.3':
+    resolution: {integrity: sha512-JZAewVDHpFMQIoPxdqPPdl+J0CVQrk2ihXFu4bM8OUvAahzYJ2lq0JbauyCQ20Rud1LtPS+VkyWw8iGiUX7wrw==}
     engines: {node: '>=18'}
     peerDependencies:
       '@aparte/core': '*'
@@ -70,23 +70,23 @@ packages:
       '@aparte/core':
         optional: true
 
-  '@aparte/locale-fr@0.16.2':
-    resolution: {integrity: sha512-Ywz7ASxa8FM4FRQ1m/6Egk1YI7TU95cPHDbU8lAPoy6f4OR0wr5ZNrq/OsW36unUEij822uoOcm7VnBYQ2FuKg==}
+  '@aparte/locale-fr@0.16.3':
+    resolution: {integrity: sha512-9idr3IRq3FExnwTpVBUFb/uGcxGB8Stw52776xU4oFfaxw3BAEiuT7syZXn6f2hE3UWlOjAH7rUR+tuZ/eW4ZA==}
     engines: {node: '>=18'}
     peerDependencies:
-      '@aparte/core': '>=0.16.2 <1.0.0'
+      '@aparte/core': '>=0.16.3 <1.0.0'
 
-  '@aparte/provider-scenario@0.16.2':
-    resolution: {integrity: sha512-tHJ4mWT7zbePbKXkS+j1PudLq7lMFvn6rUK5KxdbPyPGlRWAhAEbA/hRAeoSL7BcLBeMc2YHTAYgKGr4YRk5IA==}
+  '@aparte/provider-scenario@0.16.3':
+    resolution: {integrity: sha512-jhIu+/oeF669+J0frvBTWUZgqW7lX6zpFFS1JqZ4MytLswYJeyDXZ4cvRc4jKjzgrhwx3Zg6H7OrwRMANclQQg==}
     engines: {node: '>=18'}
     peerDependencies:
-      '@aparte/core': '>=0.16.2 <1.0.0'
+      '@aparte/core': '>=0.16.3 <1.0.0'
 
-  '@aparte/svelte@0.16.2':
-    resolution: {integrity: sha512-oFSWw3tx/IbaOoMNhgs//94atx7ahk4cUchwcriNo+aqAgVIS9lA5+KC6S6l2ZuNeE4UVoTNUJ+M6KHoaOwZJg==}
+  '@aparte/svelte@0.16.3':
+    resolution: {integrity: sha512-Q/daMqx4dajXp13DWs7rwdHUeEdG6alzeWUdRrFekQ2bnTYWi0Al1xH8xJCV689jgBDxNNejsTF23rOtBjNOhA==}
     engines: {node: '>=18'}
     peerDependencies:
-      '@aparte/core': '>=0.16.2 <1.0.0'
+      '@aparte/core': '>=0.16.3 <1.0.0'
       svelte: ^4.0.0 || ^5.0.0
 
   '@asamuzakjp/css-color@5.1.11':
@@ -1037,25 +1037,25 @@ snapshots:
 
   '@acemir/cssom@0.9.31': {}
 
-  '@aparte/core@0.16.2':
+  '@aparte/core@0.16.3':
     dependencies:
-      '@aparte/engine': 0.16.2(@aparte/core@0.16.2)
+      '@aparte/engine': 0.16.3(@aparte/core@0.16.3)
 
-  '@aparte/engine@0.16.2(@aparte/core@0.16.2)':
+  '@aparte/engine@0.16.3(@aparte/core@0.16.3)':
     optionalDependencies:
-      '@aparte/core': 0.16.2
+      '@aparte/core': 0.16.3
 
-  '@aparte/locale-fr@0.16.2(@aparte/core@0.16.2)':
+  '@aparte/locale-fr@0.16.3(@aparte/core@0.16.3)':
     dependencies:
-      '@aparte/core': 0.16.2
+      '@aparte/core': 0.16.3
 
-  '@aparte/provider-scenario@0.16.2(@aparte/core@0.16.2)':
+  '@aparte/provider-scenario@0.16.3(@aparte/core@0.16.3)':
     dependencies:
-      '@aparte/core': 0.16.2
+      '@aparte/core': 0.16.3
 
-  '@aparte/svelte@0.16.2(@aparte/core@0.16.2)(svelte@5.57.0)':
+  '@aparte/svelte@0.16.3(@aparte/core@0.16.3)(svelte@5.57.0)':
     dependencies:
-      '@aparte/core': 0.16.2
+      '@aparte/core': 0.16.3
       svelte: 5.57.0
 
   '@asamuzakjp/css-color@5.1.11':
