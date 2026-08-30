@@ -115,13 +115,49 @@ export function componentDtypes(
   const map: Record<string, string> = {};
   for (const name of names) {
     const built = components[name] ?? [];
-    if (built.includes(dtype)) map[name] = dtype;
+    const wanted = UNQUANTISED_COMPONENTS.has(name) ? unquantised(built, dtype) : dtype;
+    if (built.includes(wanted)) map[name] = wanted;
+    else if (built.includes(dtype)) map[name] = dtype;
     else if (built.length === 1 && built[0]) map[name] = built[0];
     // A component with several builds and none of them the chosen dtype: we do not know
     // which one belongs to this variant, so we name none and let the loader default.
   }
 
   return Object.keys(map).length > 0 ? map : null;
+}
+
+/**
+ * Components that must NOT be loaded quantised, whatever precision was chosen.
+ *
+ * `embed_tokens` is an embedding lookup, and a 4-bit one is exported with
+ * `com.microsoft.GatherBlockQuantized`. Ask for it on a machine without a GPU and
+ * onnxruntime-web answers `Failed to find kernel for GatherBlockQuantized … ep:
+ * 'CPUExecutionProvider'` and the model never loads at all — seen in a browser on
+ * LFM2.5-VL-450M asking for q4f16 across the board.
+ *
+ * This is also why the provider's own documentation writes its example as
+ * `{ embed_tokens: 'fp16', vision_encoder: 'q4', decoder_model_merged: 'q4' }` rather
+ * than one word for everything. It reads as a quality tip; it is a loadability rule.
+ *
+ * The saving lost is small — the embedding table is the least of the three graphs —
+ * and a Space that does not start saves nothing at all.
+ */
+const UNQUANTISED_COMPONENTS = new Set(['embed_tokens']);
+
+/** The builds that need no substituting — asking for one of these is already safe. */
+const UNQUANTISED_DTYPES = new Set(['fp16', 'fp32']);
+
+/**
+ * The build to load for a part that must not be quantised.
+ *
+ * Someone who asked for fp32 gets fp32: substituting fp16 "because it is also
+ * unquantised" would quietly hand them a smaller model than the one they chose, and be
+ * a second way of announcing one thing and fetching another.
+ */
+function unquantised(built: string[], asked: string): string {
+  if (UNQUANTISED_DTYPES.has(asked)) return asked;
+  for (const safe of ['fp16', 'fp32']) if (built.includes(safe)) return safe;
+  return asked;
 }
 
 // —————————————————————————————————————————————————————————————————————————————

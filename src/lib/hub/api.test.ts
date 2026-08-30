@@ -781,6 +781,9 @@ describe('a repo whose every component ships in every dtype', () => {
     ...graph('embed_tokens', 256),
     ...graph('embed_tokens_q4', 41),
     ...graph('embed_tokens_q4f16', 37),
+    // The build the loader is actually given for this part — see the block on
+    // `embed_tokens` below — so the figure has to count it, not the q4 next to it.
+    ...graph('embed_tokens_fp16', 128),
     ...graph('vision_encoder', 368),
     ...graph('vision_encoder_q4', 60),
     ...graph('vision_encoder_q4f16', 54),
@@ -790,8 +793,9 @@ describe('a repo whose every component ships in every dtype', () => {
     install({ model: json({ id: 'onnx-community/vl', pipeline_tag: 'image-text-to-text' }), tree: json(tree) });
     const scan = await scanModel('onnx-community/vl');
 
-    expect(scan.onnxSizes?.['q4']).toBe((248 + 41 + 60) * MB);
-    expect(scan.onnxSizes?.['q4f16']).toBe((211 + 37 + 54) * MB);
+    // 41 is the q4 of the embedding table and it is NOT what gets loaded: 128 is.
+    expect(scan.onnxSizes?.['q4']).toBe((248 + 128 + 60) * MB);
+    expect(scan.onnxSizes?.['q4f16']).toBe((211 + 128 + 54) * MB);
     expect(scan.onnxSizes?.['fp32']).toBe((1384 + 256 + 368) * MB);
   });
 
@@ -862,7 +866,8 @@ describe('componentDtypes', () => {
   it('asks for the chosen build of every part that has one', () => {
     expect(componentDtypes(scan, 'q4')).toEqual({
       decoder_model_merged: 'q4',
-      embed_tokens: 'q4',
+      // NOT q4: an embedding table is never loaded quantised — see the block below.
+      embed_tokens: 'fp16',
       // One build only, so that is what a q4 variant loads — asking for a q4 of it
       // would ask for a file that does not exist.
       vision_encoder: 'fp32',
@@ -889,5 +894,50 @@ describe('componentDtypes', () => {
     expect(componentDtypes({ onnxComponents: { model: ['q4', 'fp32'] } }, 'q4')).toEqual({
       model: 'q4',
     });
+  });
+});
+
+describe('the parts that must not be quantised', () => {
+  /**
+   * Found in a browser, on LFM2.5-VL-450M asked for q4f16 across the board:
+   *
+   *   Failed to find kernel for com.microsoft.GatherBlockQuantized
+   *   (node:'/model/embed_tokens/Gather_Quant' ep:'CPUExecutionProvider')
+   *
+   * A 4-bit embedding table needs a kernel the CPU execution provider does not have, so
+   * the model does not load AT ALL — not "loads and is a bit worse". The provider's own
+   * docs write their example the same way (`embed_tokens: 'fp16'`); it reads as a
+   * quality tip and it is a loadability rule.
+   */
+  it('keeps embed_tokens off the quantised builds', () => {
+    const scan = {
+      onnxComponents: {
+        decoder_model_merged: ['q4f16', 'fp16', 'fp32'],
+        embed_tokens: ['q4f16', 'fp16', 'fp32'],
+        vision_encoder: ['q4f16', 'fp16', 'fp32'],
+      },
+    };
+
+    expect(componentDtypes(scan, 'q4f16')).toEqual({
+      decoder_model_merged: 'q4f16',
+      embed_tokens: 'fp16',
+      vision_encoder: 'q4f16',
+    });
+  });
+
+  it('prefers fp16, falls back to fp32, and gives up rather than break the load', () => {
+    expect(componentDtypes({ onnxComponents: { embed_tokens: ['q4', 'fp32'] } }, 'q4')).toEqual({
+      embed_tokens: 'fp32',
+    });
+    // Nothing unquantised published: the asked-for build is still better than no key at
+    // all, and the loader gets to fail with its own message rather than ours.
+    expect(componentDtypes({ onnxComponents: { embed_tokens: ['q4', 'q8'] } }, 'q4')).toEqual({
+      embed_tokens: 'q4',
+    });
+  });
+
+  it('leaves every other part on the chosen precision', () => {
+    const scan = { onnxComponents: { model: ['q4', 'fp16'], vision_encoder: ['q4', 'fp16'] } };
+    expect(componentDtypes(scan, 'q4')).toEqual({ model: 'q4', vision_encoder: 'q4' });
   });
 });

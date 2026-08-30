@@ -12,3 +12,9 @@ dist/
 docs/
 spikes/
 .claude/
+
+# Throwaway probes: generated Spaces and fixtures written while verifying a spike.
+# They live in public/ so the dev server can serve them, which is exactly why they
+# need naming here — a probe is not a deliverable.
+public/__*
+s6*.mjs

@@ -749,12 +749,32 @@ function browserScript(config: SpaceConfig): string {
   const chatEl = document.querySelector('aparte-chat');
   let sent = 0;
   chatEl?.addEventListener('aparte-send', (event) => {
-    const text = event.detail?.content;
-    if (!text) return;
+    const text = event.detail?.content || '';
+    /* The files ride on the event beside the text. Rebuilding the turn from content
+       alone showed a question with no picture attached to it, while the model was
+       answering about one — the transcript quietly disagreeing with the conversation.
+       AparteClient inlines the images itself (rawFileInject defaults to all); what is
+       rebuilt here is only what the READER sees. */
+    const files = event.detail?.files || [];
+    /* An image with no words is a real turn — "what is this?" is implied. Returning
+       early on empty text dropped it entirely. */
+    if (!text && files.length === 0) return;
     chatEl.viewport?.appendMessage({
       id: 'u' + ++sent,
       role: 'user',
       content: text,
+      attachments: files.map(function (file, index) {
+        return {
+          id: 'u' + sent + '-a' + index,
+          name: file.name,
+          type: file.type,
+          /* A blob URL, not a data URL: no base64 pass over an image that may be
+             megabytes. Never revoked — the bubble keeps showing it for as long as the
+             page lives, and the page IS the session. */
+          url: URL.createObjectURL(file),
+          size: file.size,
+        };
+      }),
       timestamp: Date.now(),
     });
   });

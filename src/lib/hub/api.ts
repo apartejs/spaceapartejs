@@ -15,7 +15,7 @@
  */
 
 import { isValidRepoId } from '../config/space-config';
-import { emptyScan, type ModelScan } from './types';
+import { componentDtypes, emptyScan, type ModelScan } from './types';
 
 /**
  * The one honest way to turn a scan into "which modes are still open".
@@ -386,27 +386,38 @@ async function listOnnxFiles(id: string, headers: Record<string, string>): Promi
 
     const ordered = sortDtypes(dtypes);
     const sizes: Record<string, number> = {};
-    // What one variant weighs: every component, in THIS dtype — or in its own only
-    // build when it has no such dtype (a shared image tower, a vocoder published once).
+    // Kept in the same order as `ordered` so a caller reading a component's builds sees
+    // them smallest-first, like everywhere else this product shows dtypes. Built BEFORE
+    // the sizes, because the sizes are now counted from it.
+    const components: Record<string, string[]> = {};
+    for (const [component, byDtype] of parts) {
+      const built = sortDtypes(new Set([...byDtype].filter(([, row]) => row.graph).map(([d]) => d)));
+      if (built.length > 0) components[component] = built;
+    }
+
+    // What one variant weighs — counted through `componentDtypes`, the SAME function the
+    // generated page is told to load with. It used to be a second implementation of the
+    // rule living here, and the day the rule gained an exception (`embed_tokens` is never
+    // loaded quantised) the two would have parted: a button promising 348 MB over a page
+    // fetching an fp16 embedding table instead. Announcing one number and fetching
+    // another is the defect this whole area has already been fixed for once.
+    //
     // A single unmeasured file withholds the whole figure rather than reporting short.
     for (const dtype of ordered) {
+      const chosen = componentDtypes({ onnxComponents: components }, dtype);
       let bytes = 0;
       let measured = true;
-      for (const byDtype of parts.values()) {
-        const row = byDtype.get(dtype) ?? (byDtype.size === 1 ? [...byDtype.values()][0] : undefined);
+      for (const [component, byDtype] of parts) {
+        const build = chosen?.[component];
+        const row =
+          (build ? byDtype.get(build) : undefined) ??
+          byDtype.get(dtype) ??
+          (byDtype.size === 1 ? [...byDtype.values()][0] : undefined);
         if (!row) continue;
         if (!row.measured) measured = false;
         bytes += row.bytes;
       }
       if (measured && bytes > 0) sizes[dtype] = bytes;
-    }
-
-    // Kept in the same order as `ordered` so a caller reading a component's builds sees
-    // them smallest-first, like everywhere else this product shows dtypes.
-    const components: Record<string, string[]> = {};
-    for (const [component, byDtype] of parts) {
-      const built = sortDtypes(new Set([...byDtype].filter(([, row]) => row.graph).map(([d]) => d)));
-      if (built.length > 0) components[component] = built;
     }
 
     return { files, dtypes: ordered, sizes, components };
