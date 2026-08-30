@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.vite/
+
+.DS_Store
+*.local
+
+# Internal working documents, kept out of the public repository on purpose.
+# These are our own notes — framing, feasibility, product decisions, throwaway
+# spikes — written in French for the two of us. The published repository is
+# English, and it holds the product, not the conversation that produced it.
+docs/
+spikes/
+.claude/

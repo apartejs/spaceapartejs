@@ -1,0 +1,736 @@
+/*
+ * The scene: the mascot, the saucer, and the arrival.
+ *
+ * Every colour and every duration is a custom property, so the app can retheme the
+ * whole identity without touching a selector. The defaults are the house palette —
+ * cosmos `#17141c`, the aparté golds, Svelte orange for anything that glows — and each
+ * one reads a `--space-*` token first, so the moment the app defines its token file the
+ * scene follows it instead.
+ *
+ * Declared through `:where()` on purpose: specificity 0, so a plain `.saucer { … }` in
+ * the app always wins.
+ *
+ * Nothing here is announced. The saucer is `aria-hidden` and the mascot faces are too:
+ * to a screen reader `('.')` is five pieces of punctuation, and the regions that host
+ * them already carry the real accessible name.
+ */
+
+:where(
+  .saucer,
+  .intro,
+  .mascot,
+  .mascot-live,
+  .mascot-avatar,
+  .mascot-status,
+  .mascot-error
+) {
+  /*
+   * Each colour asks for the cockpit token first, then the older `--space-*` name, then
+   * falls back to a literal. The literals ARE the palette, on purpose: this stylesheet
+   * dropped into a page with no token file still draws the right ship, and the ship is
+   * never a different gold from the rest of the product by accident.
+   */
+  --saucer-cosmos: var(--void, var(--void, #0f0d14));
+  --saucer-hull: var(--hull-lit, #241f2e);
+  --saucer-dome: var(--seam, var(--seam, #322a40));
+  --saucer-seam: var(--seam, #322a40);
+  --saucer-gold: var(--thruster, var(--thruster, #ff3e00));
+  --saucer-gold-soft: var(--thruster-lit, var(--thruster-lit, #ff5c26));
+  --saucer-accent: var(--thruster, var(--thruster, var(--aparte-primary, #ff3e00)));
+
+  /* THE SHIP IS THE PRODUCT, so the ship wears the product's colour.
+     The saucer is Aparté Spaces' emblem — not aparté's — and the palette says the
+     product's colour is the Svelte orange. The gold belongs to the library, and here
+     it belongs to ONE thing: the pilot. So the hull is thruster, the pilot is brass,
+     and the picture says what the project is: the library flies the product.
+     The rim lights then have to leave the hull's own colour to stay visible, which is
+     what `--saucer-lamp` is for. */
+  --saucer-shell: var(--thruster, #ff3e00);
+  --saucer-lamp: var(--thruster-lit, var(--thruster-lit, #ff5c26));
+
+  /* The display face, and a real stack under it: if Instrument Serif never loads, the
+     mascot is still a serif face and nothing shifts but the shape of the parentheses. */
+  --saucer-face-font: 'Instrument Serif',
+    Georgia,
+    'Iowan Old Style',
+    'Times New Roman',
+    serif;
+
+  /* Mirrors MASCOT_CROSSFADE_MS in `lib/mascotte/states.ts`. CSS runs the dissolve, JS
+     removes the layer underneath it; retune both or neither. */
+  --mascot-crossfade: 220ms;
+
+  --saucer-float: 5.6s;
+  --saucer-hover: 2.4s;
+  --saucer-tilt: 1.9s;
+  --saucer-scan: 2.8s;
+  --saucer-stream: 1.7s;
+  --saucer-liftoff: 1.7s;
+  --saucer-glow: 3.4s;
+}
+
+/* ========================================================================== */
+/* The mascot in the chat                                                      */
+/* ========================================================================== */
+
+/*
+ * The parentheses take the colour of whatever text they sit in — the face has to be
+ * legible in a light chat and a dark one — and only the eyes carry the gold. The shape
+ * is the identity; the colour is a grace note.
+ */
+.mascot {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.18em;
+  font-family: var(--saucer-face-font);
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--mascot-ink, currentColor);
+}
+
+.mascot-face {
+  letter-spacing: 0.02em;
+}
+
+.mascot-paren {
+  color: inherit;
+  opacity: 0.85;
+}
+
+.mascot-eyes {
+  color: var(--mascot-eye-ink, var(--saucer-gold));
+}
+
+/* The running ellipsis of the thinking face. */
+.mascot-ellipsis {
+  display: inline-flex;
+  letter-spacing: 0.08em;
+}
+
+.mascot-dot {
+  opacity: 0.15;
+  animation: mascot-dot 1.35s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * 0.18s);
+}
+
+@keyframes mascot-dot {
+  0% { opacity: 0.15; }
+  30% { opacity: 1; }
+  70%, 100% { opacity: 0.15; }
+}
+
+/* The block caret of the talking face. */
+.mascot-caret {
+  color: var(--mascot-eye-ink, var(--saucer-gold));
+  animation: mascot-caret 1.05s steps(1, end) infinite;
+}
+
+@keyframes mascot-caret {
+  0%, 50% { opacity: 1; }
+  50.01%, 100% { opacity: 0; }
+}
+
+/* --- the same face, alive ------------------------------------------------- */
+
+/*
+ * A live face holds two moods at once for the length of a crossfade. They share ONE grid
+ * cell, which overlays them exactly without a single absolute position and keeps the box
+ * as wide as the widest face — so a `('.')` turning into a `(^.^)` never nudges the
+ * layout around it.
+ */
+.mascot-live {
+  display: inline-grid;
+  place-items: center;
+  line-height: 1;
+}
+
+.mascot-layer {
+  grid-area: 1 / 1;
+  display: inline-flex;
+}
+
+.mascot-layer--in {
+  animation: mascot-fade-in var(--mascot-crossfade) ease both;
+}
+
+/* The leaver is also out of the way of any hit-testing while it lingers. */
+.mascot-layer--out {
+  animation: mascot-fade-out var(--mascot-crossfade) ease both;
+  pointer-events: none;
+}
+
+@keyframes mascot-fade-in {
+  from { opacity: 0; transform: translateY(2px) scale(0.94); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes mascot-fade-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(-2px) scale(1.06); }
+}
+
+/* --- the pilot in the avatar slot ----------------------------------------- */
+
+/*
+ * The host is aparté's `.aparte-avatar`: already sized, already rounded, already
+ * clipping. We fill it edge to edge rather than sitting inside it, so the slot takes the
+ * ship's colours instead of the library's default surface — one element, no theme fight.
+ */
+.mascot-avatar {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--saucer-hull);
+  box-shadow: inset 0 0 0 1px var(--saucer-seam);
+  color: var(--saucer-gold);
+  /*
+   * Tied to the slot's own size token, so a chat that scales its avatars scales the
+   * pilot with them. The ratio is set by the WIDEST face, not by the default one:
+   * `(^.^)` measures ~0.98 of the slot at 0.34 and gets clipped by the host's
+   * `overflow: hidden` a hair above it — `('.')` alone would have allowed 0.42 and
+   * beheaded the pilot on his best day.
+   */
+  font-size: calc(var(--aparte-avatar-size, 32px) * 0.34);
+  /* The slot uppercases its initial. `(x.x)` is a face, not an initial. */
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.mascot-avatar .mascot-eyes {
+  color: var(--saucer-gold-soft);
+}
+
+/*
+ * In the slot the face carries no trail — 32px with `overflow: hidden` has no room for
+ * a running ellipsis — so `thinking` and `idle` would be the same five glyphs. The eyes
+ * do the work instead: a slow sweep, like someone reading something.
+ */
+.mascot-avatar .mascot--thinking .mascot-eyes,
+.mascot-avatar .mascot--talking .mascot-eyes {
+  display: inline-block;
+}
+
+.mascot-avatar .mascot--thinking .mascot-eyes {
+  animation: mascot-eyes-scan 2.2s ease-in-out infinite;
+}
+
+.mascot-avatar .mascot--talking .mascot-eyes {
+  animation: mascot-eyes-talk 0.9s ease-in-out infinite;
+}
+
+/* Only the EYES go orange when something breaks — the same cut the ship makes with its
+   pilot. Parentheses are the face's structure; a whole face in thruster is an alarm. */
+.mascot-avatar .mascot--error .mascot-eyes {
+  color: var(--saucer-accent);
+}
+
+@keyframes mascot-eyes-scan {
+  0%, 100% { transform: translateX(-0.07em); }
+  50% { transform: translateX(0.07em); }
+}
+
+@keyframes mascot-eyes-talk {
+  0%, 100% { transform: translateY(0.04em); }
+  50% { transform: translateY(-0.05em); }
+}
+
+/* --- the typing indicator ------------------------------------------------- */
+
+.mascot-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  color: var(--aparte-status-color, var(--aparte-text-muted, #6b7280));
+  font-size: var(--aparte-status-font-size, 13px);
+}
+
+.mascot-status-text {
+  font-style: italic;
+}
+
+/* --- an error segment ----------------------------------------------------- */
+
+.mascot-error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--aparte-space-6, 12px);
+  padding: var(--aparte-space-6, 12px) var(--aparte-space-7, 14px);
+  border: 1px solid rgba(220, 38, 38, 0.34);
+  border: 1px solid color-mix(in srgb, var(--aparte-error, #dc2626) 34%, transparent);
+  border-radius: var(--aparte-radius-lg, 10px);
+  background: rgba(220, 38, 38, 0.08);
+  background: color-mix(in srgb, var(--aparte-error, #dc2626) 8%, transparent);
+  color: var(--aparte-text, inherit);
+}
+
+/* The pilot pulls the face in the error's own colour, not in gold. */
+.mascot-error .mascot {
+  --mascot-eye-ink: currentColor;
+  color: var(--aparte-error, #dc2626);
+  font-size: 1.3em;
+  padding-top: 0.05em;
+}
+
+.mascot-error-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15em;
+  min-width: 0;
+}
+
+.mascot-error-title,
+.mascot-error-message,
+.mascot-error-details {
+  margin: 0;
+}
+
+.mascot-error-title {
+  font-weight: var(--aparte-font-weight-semibold, 600);
+  color: var(--aparte-error, #dc2626);
+}
+
+.mascot-error-message {
+  overflow-wrap: anywhere;
+}
+
+.mascot-error-details {
+  font-size: 0.88em;
+  opacity: 0.7;
+  overflow-wrap: anywhere;
+}
+
+/* ========================================================================== */
+/* The saucer                                                                  */
+/* ========================================================================== */
+
+.saucer {
+  width: var(--saucer-size, 100%);
+  aspect-ratio: 1;
+  display: block;
+}
+
+.saucer-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* Explicit: every state, liftoff included, is composed to stay inside the viewBox,
+     so the scene never bleeds over whatever the app put next to it. */
+  overflow: hidden;
+}
+
+/* --- the ship as a mark --------------------------------------------------- */
+
+/*
+ * Under ~96px the component drops the beam, the cargo and the stars (see
+ * `Saucer.svelte`) and what is left has to survive the reduction. A 240-unit box drawn
+ * at 34px puts 0.14 device pixels on every user unit, so the 4-unit hull stroke — the
+ * line that IS the silhouette against a dark panel — renders at half a pixel and the
+ * ship dissolves into its own fill. The geometry is untouched; only the weights are
+ * re-cut, the way a typeface is re-cut for small sizes rather than scaled down.
+ *
+ * The ship still breathes. That is the one piece of the scene worth keeping at any
+ * size: a console gauge that is alive.
+ */
+.saucer--mark .saucer-dome,
+.saucer--mark .saucer-body {
+  stroke-width: 10;
+}
+
+.saucer--mark .saucer-light {
+  r: 8;
+}
+
+/* The pilot is the reason the mark is a mark and not a dot; he gets the extra weight
+   the reduction took off everything else. */
+.saucer--mark .saucer-pilot {
+  font-size: 46px;
+}
+
+/* --- stars ---------------------------------------------------------------- */
+
+/*
+ * Still. The scene has a motion budget — the ship breathes, the beam works — and a field
+ * of blinking dots behind a swinging searchlight is where a cockpit turns into a
+ * screensaver. They are here to say "outside", not to perform.
+ */
+.saucer-star {
+  fill: var(--saucer-gold-soft);
+  opacity: var(--o, 0.22);
+}
+
+/* --- the tractor beam ----------------------------------------------------- */
+
+/*
+ * Pivots on the emitter (the belly of the ship) so a scan reads as a searchlight and a
+ * liftoff retracts the beam up into the hull instead of shrinking it toward the floor.
+ */
+.saucer-beam {
+  transform-box: view-box;
+  transform-origin: 120px 138px;
+  opacity: 0.14;
+  transition: opacity 420ms ease;
+}
+
+.saucer-beam-cone {
+  fill: var(--saucer-accent);
+  opacity: 0.3;
+}
+
+.saucer-beam-core {
+  fill: var(--saucer-accent);
+  opacity: 0.34;
+}
+
+/* Kept faint: swung sideways by a scan, a bright ellipse stops reading as a lit patch
+   on the ground and starts reading as a hoop hanging off the beam. */
+.saucer-beam-pool {
+  fill: var(--saucer-accent);
+  opacity: 0.18;
+}
+
+.saucer[data-state='scanning'] .saucer-beam {
+  opacity: 0.55;
+  animation: saucer-scan var(--saucer-scan) ease-in-out infinite alternate;
+}
+
+.saucer[data-state='streaming'] .saucer-beam { opacity: 0.6; }
+.saucer[data-state='waiting'] .saucer-beam { opacity: 0.1; }
+.saucer[data-state='error'] .saucer-beam { opacity: 0.07; }
+
+.saucer[data-state='liftoff'] .saucer-beam {
+  animation: saucer-retract var(--saucer-liftoff) ease-in forwards;
+}
+
+@keyframes saucer-scan {
+  from { transform: rotate(-24deg); }
+  to { transform: rotate(24deg); }
+}
+
+@keyframes saucer-retract {
+  0% { transform: scaleY(1); opacity: 0.4; }
+  100% { transform: scaleY(0); opacity: 0; }
+}
+
+/* --- the signature effect: letters travelling through the beam ------------- */
+
+/*
+ * The one thing this scene is FOR. Individual glyphs ride the tractor beam, and the
+ * direction carries the meaning: they FALL while the ship is writing (words going out)
+ * and RISE while it is scanning the Hub (data coming in). Same beam, same letters, two
+ * readings — which is cheaper than two effects and says more.
+ *
+ * `--dx` drifts each letter sideways as it travels, because the beam is a cone and a
+ * glyph that falls dead straight looks pasted onto it rather than carried by it. `--s`
+ * scales its duration: identical speeds read as a conveyor belt.
+ */
+.saucer-glyph {
+  fill: var(--saucer-gold-soft);
+  font-family: var(--saucer-face-font);
+  font-size: 19px;
+  text-anchor: middle;
+  transform-box: fill-box;
+  opacity: 0;
+}
+
+.saucer[data-state='streaming'] .saucer-glyph {
+  animation: saucer-glyph-fall calc(var(--saucer-stream) * var(--s, 1)) linear infinite;
+  animation-delay: var(--d, 0s);
+}
+
+/* Sparser and slower on the way in: a scan is a trickle of readings, not a transmission,
+   and the beam is swinging at the same time. */
+.saucer[data-state='scanning'] .saucer-glyph {
+  fill: var(--saucer-accent);
+  animation: saucer-glyph-rise calc(var(--saucer-scan) * var(--s, 1)) ease-in-out infinite;
+  animation-delay: var(--d, 0s);
+}
+
+@keyframes saucer-glyph-fall {
+  0% { transform: translate(0, -8px) scale(0.8); opacity: 0; }
+  18% { opacity: 1; }
+  74% { opacity: 0.85; }
+  100% { transform: translate(var(--dx, 0px), 64px) scale(1.14); opacity: 0; }
+}
+
+@keyframes saucer-glyph-rise {
+  0% { transform: translate(var(--dx, 0px), 62px) scale(1.1); opacity: 0; }
+  26% { opacity: 0.75; }
+  70% { opacity: 0.5; }
+  100% { transform: translate(0, -6px) scale(0.78); opacity: 0; }
+}
+
+/* --- the ship ------------------------------------------------------------- */
+
+.saucer-ship {
+  transform-box: view-box;
+  /* The hull's centre, so a tilt pivots on the ship rather than on the beam. */
+  transform-origin: 120px 121px;
+  animation: saucer-float var(--saucer-float) ease-in-out infinite;
+}
+
+.saucer[data-state='waiting'] .saucer-ship {
+  animation: saucer-hover var(--saucer-hover) ease-in-out infinite;
+}
+
+.saucer[data-state='error'] .saucer-ship {
+  animation: saucer-tilt var(--saucer-tilt) ease-in-out infinite;
+}
+
+.saucer[data-state='liftoff'] .saucer-ship {
+  animation: saucer-lift var(--saucer-liftoff) cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes saucer-float {
+  0%, 100% { transform: translateY(-4px); }
+  50% { transform: translateY(5px); }
+}
+
+@keyframes saucer-hover {
+  0%, 100% { transform: translateY(-2px) rotate(-1.2deg); }
+  50% { transform: translateY(3px) rotate(1.2deg); }
+}
+
+@keyframes saucer-tilt {
+  0%, 100% { transform: translateY(5px) rotate(-7deg); }
+  50% { transform: translateY(9px) rotate(6deg); }
+}
+
+/*
+ * Dips, then climbs — and keeps climbing until it is a speck at the top of the frame.
+ *
+ * It does not leave entirely, and that is a decision, not a shortfall: the app holds
+ * `liftoff` for six seconds while it announces the published Space, and an animation
+ * that ended off-screen would leave a 38px hole in the header for four of them. A ship
+ * gone small and dim at the top edge reads as departed and still reads as a ship.
+ */
+@keyframes saucer-lift {
+  0% { transform: translateY(0) scale(1); opacity: 1; }
+  20% { transform: translateY(13px) scale(0.98); opacity: 1; }
+  100% { transform: translateY(-78px) scale(0.5); opacity: 0.32; }
+}
+
+.saucer-dome {
+  fill: var(--saucer-dome);
+  stroke: var(--saucer-shell);
+  stroke-width: 4;
+  stroke-linejoin: round;
+}
+
+/*
+ * Waiting: the ship hovers and the glass breathes with it — the one cue that separates
+ * "holding for you" from "stuck". The STROKE pulses, never the fill: a lamp behind the
+ * dome would put a moving background under the face and cost the parentheses their
+ * contrast, which is the one thing this scene may not do.
+ */
+.saucer[data-state='waiting'] .saucer-dome {
+  animation: saucer-dome-pulse var(--saucer-glow) ease-in-out infinite;
+}
+
+@keyframes saucer-dome-pulse {
+  0%, 100% { stroke-opacity: 0.6; }
+  50% { stroke-opacity: 1; }
+}
+
+.saucer-body {
+  fill: var(--saucer-hull);
+  stroke: var(--saucer-shell);
+  stroke-width: 4;
+}
+
+/* --- rim lights ----------------------------------------------------------- */
+
+/* Lit brass, not thruster: the hull is thruster now, and a light the colour of the
+   thing it sits on is not a light. */
+.saucer-light {
+  fill: var(--saucer-lamp);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: saucer-light-pulse 3.2s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * 0.35s);
+}
+
+.saucer[data-state='liftoff'] .saucer-light {
+  animation: saucer-light-chase 0.6s linear infinite;
+  animation-delay: calc(var(--i, 0) * 0.2s);
+}
+
+.saucer[data-state='error'] .saucer-light {
+  animation: saucer-light-blink 0.7s steps(1, end) infinite;
+  animation-delay: calc(var(--i, 0) * 0.12s);
+}
+
+@keyframes saucer-light-pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+@keyframes saucer-light-chase {
+  0% { opacity: 0.25; transform: scale(0.85); }
+  25% { opacity: 1; transform: scale(1.25); }
+  100% { opacity: 0.25; transform: scale(0.85); }
+}
+
+@keyframes saucer-light-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0.12; }
+}
+
+/* --- the pilot ------------------------------------------------------------ */
+
+.saucer-pilot {
+  font-family: var(--saucer-face-font);
+  font-size: 40px;
+  fill: var(--saucer-gold);
+  /* SVG text has no box of its own to scale around; `fill-box` gives it one. */
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.saucer-pilot-paren { fill: var(--saucer-gold); }
+.saucer-pilot-eyes { fill: var(--saucer-gold-soft); }
+
+.saucer[data-state='error'] .saucer-pilot-eyes { fill: var(--saucer-accent); }
+
+/*
+ * The pilot changes his mind by dissolving. Both faces are drawn at the same x/y for the
+ * length of the crossfade — SVG text has no layout flow, so they simply overlay — and
+ * the incoming one is remounted by the component so this animation restarts even when
+ * the same mood comes back twice.
+ */
+.saucer-pilot--in {
+  animation: saucer-pilot-in var(--mascot-crossfade) ease both;
+}
+
+.saucer-pilot--out {
+  animation: saucer-pilot-out var(--mascot-crossfade) ease both;
+}
+
+@keyframes saucer-pilot-in {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes saucer-pilot-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: scale(1.12); }
+}
+
+/* ========================================================================== */
+/* The arrival                                                                 */
+/* ========================================================================== */
+
+/*
+ * `pointer-events: none` is load-bearing, not tidiness: the gesture that skips the
+ * intro also does whatever the user actually meant with it. The overlay can never
+ * swallow the first click of a session or trap the keyboard.
+ */
+.intro {
+  position: fixed;
+  inset: 0;
+  z-index: var(--intro-z, 60);
+  pointer-events: none;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  animation: intro-exit 2.4s ease forwards;
+}
+
+.intro.intro--leaving {
+  animation: intro-leave 200ms ease forwards;
+}
+
+@keyframes intro-exit {
+  0%, 76% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes intro-leave {
+  to { opacity: 0; }
+}
+
+.intro-veil {
+  position: absolute;
+  inset: 0;
+  background: var(--saucer-cosmos);
+  opacity: 0.94;
+  animation: intro-veil-lift 2.4s ease forwards;
+}
+
+@keyframes intro-veil-lift {
+  0% { opacity: 0.94; }
+  55% { opacity: 0.5; }
+  100% { opacity: 0; }
+}
+
+/*
+ * The same width the empty state gives its ship, so the arrival LANDS on it: the veil
+ * lifts and the saucer is already the size it is about to be. It was 260px against the
+ * empty state's 208px, which turned a match cut into a jump.
+ */
+.intro-stage {
+  position: relative;
+  width: min(46vmin, 208px);
+}
+
+.intro[data-variant='drop'] .intro-stage {
+  animation: intro-drop 1.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Down past its mark, then settled — a ship arriving under its own power, not an
+   element easing into place. */
+@keyframes intro-drop {
+  0% { transform: translateY(-46vh) scale(0.62); }
+  64% { transform: translateY(10px) scale(1.03); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+/* ========================================================================== */
+/* Motion is optional. Identity is not.                                        */
+/* ========================================================================== */
+
+/*
+ * Everything stops, and the scene settles into a pose that reads on its own rather than
+ * freezing mid-frame. Two things are REMOVED instead of stilled, because a stopped
+ * version of them is worse than none:
+ *
+ * - the travelling letters — the effect IS the motion, and eight glyphs stacked at the
+ *   emitter would be a smudge, not a signature;
+ * - the outgoing face of a crossfade — a fade that cannot run would leave two faces
+ *   sitting on top of each other for its whole duration, which is the one failure mode
+ *   worse than a jump cut. Here the pilot simply cuts to his new mood, instantly.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .intro {
+    display: none !important;
+  }
+
+  .saucer,
+  .saucer *,
+  .mascot,
+  .mascot *,
+  .mascot-live,
+  .mascot-live * {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .saucer-glyph,
+  .saucer-pilot--out,
+  .mascot-layer--out {
+    display: none;
+  }
+
+  .saucer-light { opacity: 0.9; }
+  .saucer-dome { stroke-opacity: 1; }
+  .mascot-dot,
+  .mascot-caret { opacity: 1; }
+  .mascot-layer--in { opacity: 1; }
+}
+
+/* Windows High Contrast drops fills: the error card keeps a real border there. */
+@media (forced-colors: active) {
+  .mascot-error {
+    border: 1px solid CanvasText;
+  }
+}

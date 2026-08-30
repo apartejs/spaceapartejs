@@ -1,0 +1,19 @@
+# What never needs to reach the build context.
+#
+# node_modules above all: it is the largest thing in the working copy by far, it is
+# rebuilt inside the image from the lockfile anyway, and shipping a Windows-resolved
+# tree into an Alpine build is how a native binary ends up wrong.
+node_modules
+dist
+
+.git
+.gitignore
+.claude
+
+# The spikes are throwaway pages kept for the record; nothing in them is served.
+spikes
+docs
+
+.DS_Store
+*.local
+.vite

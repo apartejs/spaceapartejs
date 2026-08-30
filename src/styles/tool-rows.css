@@ -1,0 +1,318 @@
+/**
+ * The tool rows.
+ *
+ * A row is an instrument reading, not a badge: the tool's name on the left, the readout
+ * in the middle, one word of state at the far end, and a diode that says at a distance
+ * whether the thing is running, has landed, or has gone wrong. Everything sits inside
+ * aparté's own row chrome (`.aparte-tool-summary`, `.aparte-tool-detail`), so the kit
+ * keeps owning the hover, the disclosure and the spacing — this sheet paints what the
+ * kit has no opinion about.
+ *
+ * The palette is read through local `--tr-*` aliases with a literal fallback, the same
+ * contract `instruments.css` uses: one place to retheme, and a sheet that still renders
+ * if it is loaded before the tokens are.
+ *
+ * ONE accent. `--thruster` is the ship's live colour and it carries every good state
+ * here — the lit diode, the answer a person gave, the link to their Space. The two
+ * status hues below are the token file's own, and they appear only when something is
+ * wrong. Brass appears nowhere: it belongs to the aparté mark in the header.
+ */
+
+.tool-row {
+  --tr-hull: var(--hull, #0f1523);
+  --tr-hull-lit: var(--hull-lit, #172031);
+  --tr-seam: var(--seam, #222c42);
+  --tr-thruster: var(--thruster, #ff3e00);
+  --tr-thruster-lit: var(--thruster-lit, #ff5c26);
+  --tr-ink: var(--ink, #ece8f1);
+  --tr-dim: var(--ink-dim, #a79fb5);
+  --tr-warn: var(--aparte-warning, #ffd166);
+  --tr-bad: var(--aparte-error, #ef5a78);
+  --tr-mono: var(--font-data, ui-monospace, 'JetBrains Mono', 'SFMono-Regular', menlo, monospace);
+  --tr-ui: var(--font-ui, system-ui, -apple-system, 'Segoe UI', sans-serif);
+
+  font-family: var(--tr-ui);
+}
+
+/*
+ * The row is one line, always. `min-width: 0` on the summary and on every flex child of
+ * it is what actually allows the readout to truncate instead of pushing the state word
+ * off the bubble — without it a long repo id makes the whole row wider than the message
+ * and the transcript scrolls sideways.
+ */
+.tool-row__summary {
+  min-width: 0;
+  font-family: var(--tr-ui);
+}
+
+.tool-row__label {
+  flex: none;
+  min-width: 0;
+  gap: 0.5rem;
+}
+
+.tool-row__name {
+  font-family: var(--tr-mono);
+  font-size: 0.8125rem;
+  color: var(--tr-dim);
+  letter-spacing: 0.01em;
+}
+
+/* ── The diode ──────────────────────────────────────────────────────────────
+   Replaces the kit's generic tool glyph. A tool row that says `scan_model` does
+   not need a picture of a wrench beside it; it needs to say, from across the
+   room, whether the call is alive. */
+.tool-row__diode {
+  flex: none;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--tr-seam);
+  box-shadow: none;
+  transition: background 180ms ease, box-shadow 180ms ease;
+}
+
+.tool-row[data-tone='live'] .tool-row__diode,
+.tool-row[data-tone='ok'] .tool-row__diode {
+  background: var(--tr-thruster);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--tr-thruster) 60%, transparent);
+}
+
+.tool-row[data-tone='live'] .tool-row__diode {
+  animation: tool-row-pulse 1.4s ease-in-out infinite;
+}
+
+.tool-row[data-tone='warn'] .tool-row__diode {
+  background: var(--tr-warn);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--tr-warn) 45%, transparent);
+}
+
+.tool-row[data-tone='bad'] .tool-row__diode {
+  background: var(--tr-bad);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--tr-bad) 45%, transparent);
+}
+
+@keyframes tool-row-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* ── The readout ────────────────────────────────────────────────────────────
+   The middle of the row: whatever the tool found, in one line that clips at the
+   end rather than wrapping. It takes the space the name and the state leave. */
+.tool-row__gist {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: baseline;
+  gap: 0.4rem;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--tr-dim);
+  mask-image: linear-gradient(to right, #000 calc(100% - 1.25rem), transparent);
+}
+
+.tool-row__gist > * {
+  flex: none;
+}
+
+/* The one thing allowed to shrink: a repo id can be 90 characters, and losing its
+   tail costs less than losing the verdict beside it. */
+.tool-row__mono {
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--tr-mono);
+  font-size: 0.78125rem;
+  color: var(--tr-ink);
+}
+
+.tool-row__note {
+  color: var(--tr-dim);
+}
+
+.tool-row__error {
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--tr-bad);
+}
+
+/* A fact with its unit: `q4 · 4-bit`, `index.html · 2.1 kB`. Small, boxed, mono —
+   the Hub's own voice, which is where all of these numbers came from. */
+.tool-row__chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  padding: 0.05rem 0.4rem;
+  border: 1px solid var(--tr-seam);
+  border-radius: 999px;
+  background: var(--tr-hull-lit);
+  font-family: var(--tr-mono);
+  font-size: 0.71875rem;
+  line-height: 1.6;
+  color: var(--tr-ink);
+}
+
+.tool-row__chip-note {
+  color: var(--tr-dim);
+}
+
+/* The Hub's own token for the task. Mono, dim, no box: it is a label, not a finding. */
+.tool-row__tag {
+  overflow: hidden;
+  flex-shrink: 1;
+  min-width: 0;
+  text-overflow: ellipsis;
+  font-family: var(--tr-mono);
+  font-size: 0.71875rem;
+  color: var(--tr-dim);
+}
+
+/* A capability the generated page will actually turn on — worth the accent. */
+.tool-row__flag {
+  padding: 0.05rem 0.35rem;
+  border: 1px solid color-mix(in srgb, var(--tr-thruster) 45%, transparent);
+  border-radius: 4px;
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tr-thruster-lit);
+}
+
+/* A measured total. Mono, because it is a number the reader may want to compare. */
+.tool-row__total {
+  font-family: var(--tr-mono);
+  font-size: 0.75rem;
+  color: var(--tr-ink);
+}
+
+/* ── The ask_* rows ─────────────────────────────────────────────────────────
+   A question and its answer. The question is a label; the answer is the only
+   thing the reader is scanning for, so it wears the product colour. */
+.tool-row__question {
+  font-size: 0.71875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tr-dim);
+}
+
+.tool-row__answer {
+  overflow: hidden;
+  flex-shrink: 1;
+  min-width: 0;
+  text-overflow: ellipsis;
+  font-weight: 500;
+  color: var(--tr-thruster-lit);
+}
+
+/* ── The link to the Space ──────────────────────────────────────────────────
+   The one clickable thing in any row. Underlined on hover only, so a row at rest
+   still reads as a line rather than as a list of links. */
+.tool-row__link {
+  color: var(--tr-thruster-lit);
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--tr-thruster) 45%, transparent);
+}
+
+.tool-row__link:hover,
+.tool-row__link:focus-visible {
+  color: var(--tr-thruster-lit);
+  border-bottom-color: var(--tr-thruster-lit);
+}
+
+/* ── The state word ─────────────────────────────────────────────────────────
+   Doubled class on purpose. aparté tints a resolved row's word with its success
+   ink (`.aparte-segment-tool-call[data-status='resolved'] .aparte-tool-state`,
+   0,3,0), and this product has one accent and no green. 0,4,0 wins that without
+   depending on which stylesheet the bundler happened to emit last. */
+.tool-row.tool-row .aparte-tool-state {
+  flex: none;
+  font-size: 0.71875rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--tr-dim);
+}
+
+.tool-row.tool-row[data-tone='warn'] .aparte-tool-state {
+  color: var(--tr-warn);
+}
+
+.tool-row.tool-row[data-tone='bad'] .aparte-tool-state {
+  color: var(--tr-bad);
+}
+
+/* ── The disclosure ─────────────────────────────────────────────────────────
+   Everything the row could not fit: the full scan, the per-file sizes, the
+   arguments the model chose, the raw result. */
+.tool-row__toggle {
+  color: var(--tr-dim);
+}
+
+.tool-row[data-empty='true'] .tool-row__toggle {
+  visibility: hidden;
+}
+
+.tool-row__detail {
+  font-size: 0.78125rem;
+  color: var(--tr-dim);
+}
+
+.tool-row__line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.15rem 0;
+}
+
+.tool-row__line + .tool-row__line {
+  border-top: 1px solid color-mix(in srgb, var(--tr-seam) 60%, transparent);
+}
+
+.tool-row__line-label {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--tr-dim);
+}
+
+.tool-row__line-value {
+  flex: none;
+  font-family: var(--tr-mono);
+  font-size: 0.75rem;
+  color: var(--tr-ink);
+}
+
+.tool-row__line--total .tool-row__line-label {
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tr-ink);
+}
+
+.tool-row__detail .aparte-tool-part-body pre {
+  font-size: 0.71875rem;
+}
+
+/* Motion is a courtesy, and it is off the moment the reader says so. */
+@media (prefers-reduced-motion: reduce) {
+  .tool-row,
+  .tool-row *,
+  .tool-row *::before,
+  .tool-row *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}

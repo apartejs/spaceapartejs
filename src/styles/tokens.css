@@ -1,0 +1,364 @@
+/**
+ * The ship, lit from inside.
+ *
+ * One source of truth for the whole cockpit. The palette is named after the object it
+ * paints — the hull, the seam between panels, the brass of the instrument bezels, the
+ * thruster — because that is what the interface actually is: a flying saucer seen from
+ * the pilot's seat, with the preview pane as its windshield.
+ *
+ * Three layers, in this order:
+ *
+ *   1. THE PALETTE (`--void` … `--ink-dim`) and the three type faces. Nothing outside
+ *      this set is allowed to appear anywhere in the product.
+ *   2. THE `--space-*` ALIASES. Every component in `src/components` already reads these,
+ *      and so does `scene.css`; they are kept as thin pointers into the palette so the
+ *      palette stays the only place a colour is chosen.
+ *   3. APARTÉ'S OWN VARIABLES, fed from the same two. The chat is not skinned to look
+ *      like the ship — it inherits the ship, which is the whole point of the showcase.
+ *
+ * Written on `:root` AND on `:root[data-aparte-theme='dark']`: aparté declares its dark
+ * literals on `[data-aparte-theme="dark"]`, which has the same specificity as `:root`,
+ * and its derived layer re-anchors on `[data-aparte-theme]`. Naming both selectors means
+ * this file wins on cascade order *and* on specificity, rather than on import order
+ * alone.
+ *
+ * This is a cockpit. It is dark, and there is no light theme — the one thing that must
+ * still render in any theme is the PREVIEW, and that lives inside its own iframe with
+ * its own stylesheet.
+ */
+
+:root,
+:root[data-aparte-theme='dark'] {
+  /* ── The palette ──────────────────────────────────────────────────────────
+     Eight colours. The first four are the ship as an object, the next two are
+     aparté's gold, then the one live colour, then the two inks. */
+
+  --void: #070a12; /* the space outside the hull — the page ground */
+  --hull: #0f1523; /* panels and surfaces */
+  --hull-lit: #172031; /* raised surfaces: the composer, the cards, the bezels */
+  --seam: #222c42; /* the hairline between two panels */
+
+  --brass: #d9a24b; /* aparté's gold — instrument bezels, the mascot */
+  --brass-lit: #e7c588; /* the mascot's eyes, highlights */
+
+  /* Svelte orange. ONLY for live/active: the beam, a lit diode, an armed control,
+     the send button. Never a large fill — 5.5:1 on the void as a hairline or a
+     glyph, and a wash of it would drown the brass. */
+  --thruster: #ff3e00;
+  --thruster-lit: #ff5c26;
+
+  --ink: #ece8f1; /* text */
+  --ink-dim: #a79fb5; /* secondary text — 7:1 on the hull, measured */
+
+  /* ── The three faces ──────────────────────────────────────────────────────
+     A deliberate tension: the theatre, the terminal, and nothing in between.
+
+     DISPLAY is the product name, the mascot's punctuation and section titles —
+     never UI copy. Georgia is a real fallback and not a fig leaf: it is a
+     transitional serif of similar colour, so a page whose webfont never arrives
+     is a slightly different page, not a broken one.
+
+     UI has no personality on purpose. It is the label etched next to a switch.
+
+     DATA is for everything the Hub owns — model ids, dtypes, file names, byte
+     counts. Monospace is how the page says "this is a literal value". */
+
+  --font-display: 'Instrument Serif', Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+  --font-ui:
+    system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-data:
+    ui-monospace, 'JetBrains Mono', 'Cascadia Code', SFMono-Regular, Menlo, Consolas,
+    'Liberation Mono', monospace;
+
+  /* ── The type scale ───────────────────────────────────────────────────────
+     Small at the bottom because the instrument labels are small; one big jump at
+     the top because the hero is the only place the display face gets to speak. */
+
+  --text-2xs: 0.6875rem; /* etched labels: READOUT, PREVIEW ONLY */
+  --text-xs: 0.75rem; /* file contents, byte counts */
+  --text-sm: 0.8125rem; /* secondary UI copy */
+  --text-md: 0.875rem; /* body */
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-title: 1.25rem; /* the product name in the console strip */
+  --text-hero: clamp(1.75rem, 1.1rem + 2.6vw, 2.75rem);
+
+  /* Tracking for the etched labels. Small caps are set with letter-spacing, never
+     with `font-variant`: the UI face's small caps are synthesised and read as a
+     smudge at 11px. */
+  --track-etched: 0.14em;
+
+  /* ── Geometry ─────────────────────────────────────────────────────────────── */
+
+  --space-radius: 12px;
+  --space-radius-sm: 8px;
+  --space-header-height: 52px;
+  /* The ship's spine. Wider than aparté's default 4px seam because it is the one
+     structural line of the page; the grab area around it does not change. */
+  --spine-width: 6px;
+
+  /* ── Motion ───────────────────────────────────────────────────────────────
+     One orchestrated idea. Everything under 300ms except the ambient float, and
+     every one of them is switched off wholesale at the bottom of this file. */
+
+  --ambient-float: 5.6s;
+  --tick-fast: 120ms;
+  --tick: 180ms;
+  --tick-slow: 280ms;
+
+  /* ── The `--space-*` aliases ──────────────────────────────────────────────
+     Kept, and kept thin: the components and `scene.css` were written against
+     these names and there is no value in a rename that changes no pixel. */
+
+  --space-bg: var(--void);
+  --space-cosmos: var(--void);
+  --space-surface: var(--hull);
+  --space-surface-2: var(--hull-lit);
+  --space-border: var(--seam);
+
+  --space-gold: var(--brass);
+  --space-gold-bright: var(--brass-lit);
+  --space-gold-soft: var(--brass-lit);
+
+  --space-accent: var(--thruster);
+  --space-accent-hover: var(--thruster-lit);
+  --space-accent-ink: #ffffff;
+
+  --space-text: var(--ink);
+  --space-text-muted: var(--ink-dim);
+
+  /* `scene.css` reads these three for the ship itself. The hull it draws is the
+     RAISED surface: the saucer sits on the void, so its body has to step forward
+     from it or the silhouette disappears. */
+  --space-hull: var(--hull-lit);
+  --space-dome: #2b2436;
+  --space-face-font: var(--font-display);
+
+  /* ── Aparté ───────────────────────────────────────────────────────────────
+     The library gets the ship, not a skin of it. Only the masters are set here;
+     aparté derives the rest (inks, scales, surface-3, the user bubble tint) from
+     them in its own anchored layer. */
+
+  --aparte-bg: var(--void);
+  --aparte-surface: var(--hull);
+  --aparte-surface-1: var(--hull);
+  --aparte-surface-2: var(--hull-lit);
+  --aparte-border: var(--seam);
+  --aparte-text: var(--ink);
+  --aparte-text-muted: var(--ink-dim);
+  --aparte-neutral: var(--ink-dim);
+
+  /* Primary is the LIVE colour: the send button, the armed control, the focus
+     border. Accent is the brass, which is what the library uses for the quiet
+     identity marks. That split is the palette's rule, expressed in aparté's
+     vocabulary. */
+  --aparte-primary: var(--thruster);
+  --aparte-primary-hover: var(--thruster-lit);
+  --aparte-primary-ink: var(--space-accent-ink);
+  /* The kit's SECOND intent — it paints `--secondary` buttons, and the checkboxes,
+     radios, switches, ranges, badges and alerts through `--aparte-*-intent`. Left
+     undeclared it stays #9a8fb0, a mauve that belongs to neither family, and it shows
+     on any elicitation field our own instruments do not take over.
+     Brass rather than thruster, and the distinction is worth keeping: thruster is a
+     STATE OF THE APP (which view is live, what the send button does), brass is an
+     ENTRY the user is making in a form. Both are ours. */
+  --aparte-secondary: var(--brass);
+  --aparte-accent: var(--brass);
+  --aparte-border-focus: var(--thruster);
+
+  --aparte-font-family: var(--font-ui);
+  --aparte-code-font-family: var(--font-data);
+
+  --aparte-radius-lg: var(--space-radius);
+  --aparte-app-header-height: var(--space-header-height);
+  --aparte-split-handle-size: var(--spine-width);
+
+  /* The composer is the instrument panel: it steps forward from the transcript
+     rather than sitting flush in it. */
+  --aparte-input-bg: var(--hull-lit);
+  --aparte-input-border: var(--seam);
+
+  /* A code block in the transcript is a literal value like any other. */
+  --aparte-code-bg: var(--hull-lit);
+  --aparte-code-border: var(--seam);
+
+  /* ── The last sixteen ──────────────────────────────────────────────────────
+     Everything above rebrands the chat. These are the colours aparté declares as
+     literals and derives nothing from, so they stay factory unless a product says
+     otherwise — and a factory colour in a themed product is the one thing a reader
+     notices without being able to name it.
+
+     STATUS. They keep their meaning (nobody wants a green error) but they are pulled
+     onto this palette: warmer, less saturated, and — the constraint that decides the
+     hues — each one has to be unmistakable against BOTH of the product's own colours.
+     A red that reads as thruster orange, or an amber that reads as brass, would say
+     "something is live" where it means "something is wrong". */
+  --aparte-error: #ef5a78; /* rose-red: never confusable with #ff3e00 */
+  --aparte-success: #4fbf8b;
+  --aparte-warning: #ffd166; /* a true yellow: brass is darker and gilded */
+  --aparte-info: #6aa9e9; /* the one cold colour, and it earns it — info is not urgent */
+
+  /* The error card's five parts, derived from the one hue above rather than pinned
+     five more times, so a change to `--aparte-error` moves the whole card. */
+  --aparte-error-bg: color-mix(in srgb, var(--aparte-error) 12%, var(--hull));
+  --aparte-error-border: color-mix(in srgb, var(--aparte-error) 38%, transparent);
+  --aparte-error-solid: var(--aparte-error);
+  --aparte-error-text: color-mix(in srgb, var(--aparte-error) 72%, var(--ink));
+  --aparte-error-title: color-mix(in srgb, var(--aparte-error) 84%, var(--ink));
+
+  /* NEUTRALS THAT ASSUMED A LIGHT PAGE. Each of these is a black or a white chosen
+     for a bright ground, and on the void they range from invisible to a hole. */
+
+  /* Was rgba(0,0,0,0.05): black on black. The hover state of a code block's copy
+     button simply did not exist here. */
+  --aparte-code-copy-hover-bg: rgb(255 255 255 / 0.07);
+
+  /* Attachment thumbnails: pure white ink and a near-black chip. Ours are the page's
+     own ink on a hull that already sits above the image. */
+  --aparte-thumb-name-color: var(--ink);
+  --aparte-thumb-remove-bg: color-mix(in srgb, var(--void) 78%, transparent);
+  --aparte-thumb-remove-bg-hover: color-mix(in srgb, var(--void) 92%, transparent);
+  --aparte-thumb-remove-color: var(--ink);
+
+  /* The ink on a `--secondary` control. Brass is light enough that the near-black
+     default is right in principle; it is pinned to the void so a palette change
+     carries it. */
+  --aparte-on-intent: var(--void);
+
+  /* The shade behind an open dialog. 35 % of black over #0f0d14 barely reads as a
+     layer at all — the dialog looked pasted rather than lifted. */
+  --aparte-scrim: rgb(6 4 10 / 0.62);
+
+  color-scheme: dark;
+}
+
+/*
+ * The one reset this app owes the page.
+ *
+ * aparté declares `border-box` on its own CLASSES, and every element it styles carries
+ * one — except the custom-element tags themselves. `<aparte-chat-viewport>` matches no
+ * rule anywhere in the document, so it fell back to the CSS initial `content-box`, took
+ * its `width: 100%` from the pane and then ADDED its 16px gutters on top: 407px of
+ * transcript inside a 375px phone, with the right-hand 32px clipped by the container
+ * above it. Every message lost its last two characters, and `✓ Done` on a tool row lost
+ * the word.
+ *
+ * Found at 375px in a browser, not by reading. It belongs here rather than in the
+ * library: hosting a web component is the host's job, and the box model is the page's.
+ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  background: var(--void);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  /* The ship is drawn with hairlines; unhinted stems on a dark ground go muddy. */
+  -webkit-font-smoothing: antialiased;
+}
+
+#app {
+  height: 100dvh;
+}
+
+/*
+ * The noscript / under-the-fold pitch. It is read by crawlers and by anyone with
+ * JavaScript off, so it carries the identity on its own: the display face, the brass,
+ * and nothing that needs the app to have booted.
+ */
+.landing {
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 3rem 1.5rem;
+  line-height: 1.6;
+}
+
+.landing h1 {
+  margin: 0 0 0.75rem;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: var(--text-hero);
+  letter-spacing: 0.01em;
+  color: var(--brass);
+}
+
+.landing p {
+  color: var(--ink-dim);
+}
+
+/*
+ * Focus, in the live colour, on everything. Two pixels of thruster clears 3:1 against
+ * the void, the hull and the raised hull alike — it is the one indicator that must never
+ * depend on which panel it landed on.
+ */
+*:focus-visible {
+  outline: 2px solid var(--thruster);
+  outline-offset: 2px;
+}
+
+/*
+ * …including the library's own controls, which is a deliberate override.
+ *
+ * aparté ties a control's focus outline to that control's INTENT — a surface button
+ * gets a neutral ring, a primary one gets the primary ring — so on this palette the
+ * keyboard indicator changed colour from control to control and landed on `--ink-dim`
+ * for most of them. Legible, but wrong here: in a cockpit the live colour means one
+ * thing, and "this is the control your keyboard is on" is exactly that thing. One
+ * colour, every control, so it is recognised rather than read.
+ *
+ * These selectors are the library's own, matched at the same specificity and won on
+ * cascade order — `tokens.css` is imported after `@aparte/core/styles.css` in `main.ts`,
+ * which is the whole reason this file can speak last.
+ */
+.aparte-btn:focus-visible,
+.aparte-tabs__tab:focus-visible,
+.aparte-split__handle:focus-visible,
+.aparte-field:focus-visible,
+.aparte-link:focus-visible,
+.aparte-menu__item:focus-visible,
+.aparte-alert__dismiss:focus-visible {
+  outline-color: var(--thruster);
+}
+
+/*
+ * Windows High Contrast picks the indicator, not us. aparté already says so for its
+ * buttons; the override above would otherwise have taken that back, so it is restated
+ * here for every selector the override touches.
+ */
+@media (forced-colors: active) {
+  *:focus-visible,
+  .aparte-btn:focus-visible,
+  .aparte-tabs__tab:focus-visible,
+  .aparte-split__handle:focus-visible,
+  .aparte-field:focus-visible,
+  .aparte-link:focus-visible,
+  .aparte-menu__item:focus-visible,
+  .aparte-alert__dismiss:focus-visible {
+    outline-color: Highlight;
+  }
+}
+
+/*
+ * Motion is optional; the ship is not.
+ *
+ * The scene's own animations are stilled in `scene.css`. This is the app's half of the
+ * same promise, and it is deliberately a sledgehammer: anything that moves in the shell
+ * — a breathing hull, a lit diode, a hover transition — stops here, and the interface it
+ * leaves behind is the same interface at rest.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

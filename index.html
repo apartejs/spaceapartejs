@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en" data-aparte-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Aparté Spaces — a demo for your model, in three clicks</title>
+    <meta
+      name="description"
+      content="Turn a Hugging Face model into a ready-to-run Space: answer a few questions in a chat, watch the preview, then download the files or push the Space to your account. No build step, no backend."
+    />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2064%2064'%3E%3Crect%20width%3D'64'%20height%3D'64'%20rx%3D'14'%20fill%3D'%23070a12'%2F%3E%3Cpath%20d%3D'M%2024%2048%20L%2018%2060%20L%2046%2060%20L%2040%2048%20Z'%20fill%3D'%23ff3e00'%20opacity%3D'0.22'%2F%3E%3Cellipse%20cx%3D'32'%20cy%3D'42'%20rx%3D'25'%20ry%3D'6'%20fill%3D'%23222c42'%20stroke%3D'%23ff3e00'%20stroke-width%3D'2.5'%2F%3E%3Ccircle%20cx%3D'16'%20cy%3D'45'%20r%3D'2.2'%20fill%3D'%23ff5c26'%2F%3E%3Ccircle%20cx%3D'32'%20cy%3D'47'%20r%3D'2.2'%20fill%3D'%23ff5c26'%2F%3E%3Ccircle%20cx%3D'48'%20cy%3D'45'%20r%3D'2.2'%20fill%3D'%23ff5c26'%2F%3E%3Ctext%20x%3D'32'%20y%3D'32'%20text-anchor%3D'middle'%20font-family%3D'Georgia%2C%20serif'%20font-size%3D'23'%20fill%3D'%23ff3e00'%3E(%3Ctspan%20fill%3D'%23ff5c26'%3E.%3C%2Ftspan%3E)%3C%2Ftext%3E%3C%2Fsvg%3E" />
+
+    <!-- Instrument Serif — the display face, and a coincidence worth enjoying in a
+         product whose composer is an instrument panel. It is used for exactly three
+         things (the product name, the mascot's punctuation, the section titles), so it
+         is one family at one weight and nothing is asked of the network beyond that.
+
+         `display=swap` and a real Georgia fallback in `--font-display` are the contract:
+         if fonts.googleapis.com is blocked, slow, or simply gone, the page renders in a
+         transitional serif of similar colour and nothing shifts but the shapes. Nothing
+         in the layout is measured against this font. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap"
+    />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://space.apartejs.dev" />
+    <meta property="og:title" content="Aparté Spaces" />
+    <meta
+      property="og:description"
+      content="Your model deserves better than a README. Configure a demo in a chat, ship it as a Hugging Face Space."
+    />
+    <!-- The card image. `summary_large_image` promises one, and without it the card
+         renders as an empty grey box — which is what this page shipped with until the
+         SEO pass went looking. Crawlers do not resolve relative paths, so the URL is
+         absolute; the file is 1200x630, the size both Open Graph and Twitter expect.
+         `twitter:image` is stated separately rather than left to fall back on og:image,
+         because that fallback is a convention rather than a guarantee. -->
+    <meta property="og:image" content="https://space.apartejs.dev/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="Aparté Spaces — a saucer with a small face in its dome, over the words: your model deserves better than a README."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="https://space.apartejs.dev/og.png" />
+
+    <!-- The landing lives in the HTML itself, under the fold: crawlers (and readers with
+         JavaScript off) get the pitch without waiting for the app to mount. -->
+  </head>
+  <body>
+    <div id="app"></div>
+
+    <noscript>
+      <section class="landing">
+        <h1>Aparté Spaces</h1>
+        <p>
+          A configurator that turns a Hugging Face model into a ready-to-run Space. It needs
+          JavaScript — the whole thing runs in your browser, with no backend.
+        </p>
+      </section>
+    </noscript>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

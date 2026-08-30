@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="186" height="28" viewBox="0 0 186 28" role="img" aria-label="Made with Aparté Spaces">
+  <title>Made with Aparté Spaces</title>
+  <!-- Served from space.apartejs.dev/badge.svg and embedded in every generated Space's
+       README, where huggingface.co renders it — the backlink of the distribution loop.
+       Pure glyphs, no raster, no external font: it must render the same everywhere. -->
+  <rect width="186" height="28" rx="6" fill="#17141c"/>
+  <rect x="0.5" y="0.5" width="185" height="27" rx="5.5" fill="none" stroke="#342c42"/>
+
+  <!-- the pilot -->
+  <text x="14" y="19" font-family="Georgia, 'Times New Roman', serif" font-size="14" fill="#d9a24b">(<tspan fill="#e7c588">'.'</tspan>)</text>
+
+  <text x="52" y="18" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#a79fb5">Made with</text>
+  <text x="112" y="18" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" font-weight="600" fill="#ece8f1">Aparté</text>
+
+  <!-- the Svelte-orange rim light, echoing the saucer -->
+  <circle cx="172" cy="14" r="3.5" fill="#FF3E00"/>
+</svg>

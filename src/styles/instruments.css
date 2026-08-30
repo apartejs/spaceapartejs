@@ -1,0 +1,677 @@
+/**
+ * The instrument panel.
+ *
+ * Everything here is scoped under `.instrument`, the root class every control carries,
+ * so nothing leaks into the rest of the app and — more importantly — nothing leaks
+ * into the Space being previewed in the other half of the screen.
+ *
+ * The palette is read through local `--i-*` aliases with a three-deep fallback: the
+ * cockpit tokens first, the product's older `--space-*` names second, a literal last.
+ * One control, one place to retheme, and a stylesheet that cannot render invisible if
+ * it is loaded before the tokens are.
+ */
+
+.instrument {
+  --i-hull: var(--hull, #1a1622);
+  --i-hull-lit: var(--hull-lit, #241f2e);
+  --i-seam: var(--seam, #322a40);
+  --i-accent: var(--thruster, #ff3e00);
+  --i-lit: var(--thruster-lit, #ff5c26);
+  --i-thruster: var(--thruster, #ff3e00);
+  --i-ink: var(--ink, #ece8f1);
+  --i-ink-dim: var(--ink-dim, #a79fb5);
+  /* The two faces the cockpit owns, asked for by name so the panel cannot drift out of
+     step with the rest of the product; the stacks under them are the same ones
+     `tokens.css` declares, kept here so this sheet still renders alone. */
+  --i-mono: var(
+    --font-data,
+    ui-monospace,
+    'JetBrains Mono',
+    'SFMono-Regular',
+    menlo,
+    consolas,
+    monospace
+  );
+  --i-ui: var(--font-ui, system-ui, -apple-system, 'Segoe UI', sans-serif);
+  --i-display: var(--font-display, 'Instrument Serif', georgia, 'Times New Roman', serif);
+  --i-radius: 10px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  color: var(--i-ink);
+  font-family: var(--i-ui);
+}
+
+/*
+ * The panel steps through a form by setting `hidden` on the field it is not showing.
+ * A `display` on `.instrument` would beat that, and every question would be on screen
+ * at once — so the attribute wins here, explicitly.
+ */
+.instrument[hidden] {
+  display: none;
+}
+
+.instrument *,
+.instrument *::before,
+.instrument *::after {
+  box-sizing: border-box;
+}
+
+/* ── The question above the control ─────────────────────────────────────────── */
+
+/*
+ * A gutter for the Skip control, which the panel pins to its own top-right corner with
+ * `position: absolute; inset-inline-end: 0` and takes out of flow — over a message that
+ * reserves nothing for it. Short built-in questions never reach the button; ours are
+ * computed from the repo and run two lines ("This repo ships eight sizes of weights:
+ * q4f16, q4, bnb4, int8, uint8, q8, fp16 and fp32…"), so the first line ran straight
+ * under it. Seen in the browser, not reasoned about, and filed upstream — the overlap is
+ * the library's own two elements, and this is a patch over it until it lands there.
+ *
+ * Two selectors because the panel prints ONE of two things first, and either can be the
+ * one under the button:
+ *
+ * - the message, when the turn has one. Not scoped to `:has(.instrument)` any more: the
+ *   collision belongs to the message and the button, and `ask_model` — a plain text
+ *   field, no instrument of ours anywhere — collided exactly the same way.
+ * - the first instrument's question, when the turn has NO message. The language question
+ *   is the one that does this: its message would have printed the question a second time,
+ *   so the field carries it alone and the field's title is now the top line.
+ *
+ * 4rem rather than the button's ~3.3rem because the button holds a WORD — `Skip` in
+ * English, `Passer` in French, and whatever the next locale makes of it.
+ */
+.aparte-elic-panel:has(.aparte-elic-dismiss) > .aparte-elic-message,
+.aparte-elic-panel:has(.aparte-elic-dismiss):not(:has(> .aparte-elic-message))
+  .aparte-elic-body
+  > .instrument:first-child
+  > .instrument__question {
+  padding-inline-end: 4rem;
+}
+
+/*
+ * Two classes deep on purpose, and it is not decoration: the header also wears the
+ * library's `.aparte-elic-title`, which indents itself to align with the built-in
+ * option rows. Ours align with the instrument below them instead, and the rule has to
+ * win whatever order the two stylesheets end up in.
+ */
+.instrument > .instrument__question {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  color: var(--i-ink);
+}
+
+.instrument > .instrument__hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--i-ink-dim);
+}
+
+/* ── Shared parts ───────────────────────────────────────────────────────────── */
+
+/*
+ * `:where()` on purpose: a reset that has to lose. Written as `.instrument button` it
+ * scores higher than the single class every control styles itself with, and quietly
+ * stripped the background off every swatch, tile and card below.
+ */
+:where(.instrument button) {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  background: none;
+  border: none;
+}
+
+.instrument :focus-visible {
+  outline: 2px solid var(--i-thruster);
+  outline-offset: 2px;
+}
+
+.instrument__row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.instrument__row--end {
+  justify-content: flex-end;
+}
+
+/* A literal value the Hub owns, or a measurement: always the mono face. */
+.instrument__data,
+.instrument__readout,
+.instrument__count {
+  font-family: var(--i-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.01em;
+  color: var(--i-ink-dim);
+}
+
+.instrument__readout {
+  color: var(--i-ink);
+}
+
+.instrument__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* The diode: unlit brass until its card is chosen, then live. */
+.instrument__pip {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  width: 6px;
+  height: 6px;
+  background: var(--i-accent);
+  border-radius: 50%;
+  transition: background-color 140ms ease, box-shadow 140ms ease;
+}
+
+.is-lit .instrument__pip {
+  background: var(--i-thruster);
+  box-shadow: 0 0 0 3px rgb(255 62 0 / 22%);
+}
+
+/* ── 1. Colour ──────────────────────────────────────────────────────────────── */
+
+.instrument__swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.instrument__swatch {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  background: var(--swatch, var(--i-accent));
+  border: 1px solid rgb(0 0 0 / 35%);
+  border-radius: 50%;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 22%);
+  transition: transform 140ms ease, box-shadow 140ms ease;
+}
+
+.instrument__swatch:hover {
+  transform: translateY(-1px);
+}
+
+.instrument__swatch.is-lit {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 22%),
+    0 0 0 2px var(--i-hull),
+    0 0 0 4px var(--i-thruster);
+}
+
+.instrument__custom {
+  position: relative;
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+  padding: 0.25rem 0.5rem 0.25rem 0.25rem;
+  background: var(--i-hull-lit);
+  border: 1px solid var(--i-seam);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.instrument__custom.is-lit {
+  border-color: var(--i-thruster);
+}
+
+.instrument__custom-label {
+  font-size: 0.75rem;
+  color: var(--i-ink-dim);
+}
+
+.instrument__picker {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  cursor: pointer;
+  background: none;
+  border: none;
+  border-radius: 50%;
+}
+
+.instrument__picker::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.instrument__picker::-webkit-color-swatch {
+  border: 1px solid rgb(0 0 0 / 35%);
+  border-radius: 50%;
+}
+
+.instrument__picker::-moz-color-swatch {
+  border: 1px solid rgb(0 0 0 / 35%);
+  border-radius: 50%;
+}
+
+/* ── 2. Emoji ───────────────────────────────────────────────────────────────── */
+
+.instrument__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+  gap: 0.25rem;
+}
+
+.instrument__emoji {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  min-height: 40px;
+  background: var(--i-hull-lit);
+  border: 1px solid transparent;
+  border-radius: var(--i-radius);
+  transition: background-color 140ms ease, box-shadow 140ms ease;
+}
+
+.instrument__emoji:hover {
+  background: var(--i-seam);
+}
+
+.instrument__emoji.is-lit {
+  border-color: var(--i-thruster);
+  box-shadow: 0 0 0 1px var(--i-thruster);
+}
+
+.instrument__glyph {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.instrument__other {
+  width: 4.5rem;
+  padding: 0.35rem 0.5rem;
+  font: inherit;
+  font-size: 1rem;
+  color: var(--i-ink);
+  text-align: center;
+  background: var(--i-hull-lit);
+  border: 1px solid var(--i-seam);
+  border-radius: 8px;
+}
+
+/* ── 3. Theme ───────────────────────────────────────────────────────────────── */
+
+.instrument__themes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
+  gap: 0.5rem;
+}
+
+.instrument__theme {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.4rem;
+  background: var(--i-hull-lit);
+  border: 1px solid var(--i-seam);
+  border-radius: var(--i-radius);
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.instrument__theme:hover {
+  border-color: var(--i-accent);
+}
+
+.instrument__theme.is-lit {
+  border-color: var(--i-thruster);
+  box-shadow: 0 0 0 1px var(--i-thruster);
+}
+
+.instrument__label {
+  font-size: 0.75rem;
+  line-height: 1.25;
+  color: var(--i-ink-dim);
+  text-align: center;
+}
+
+.is-lit .instrument__label {
+  color: var(--i-ink);
+}
+
+/* The little page the theme makes: a header, two bubbles, a composer bar. */
+.instrument__face {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  aspect-ratio: 4 / 3;
+  padding: 4px;
+  overflow: hidden;
+  background: var(--face-bg);
+  border-radius: 6px;
+}
+
+.instrument__face[data-face='light'] {
+  --face-bg: #f6f4f9;
+  --face-bar: #ded9e6;
+  --face-bubble: #e6e2ee;
+  --face-mine: var(--i-accent);
+  --face-composer: #ffffff;
+}
+
+.instrument__face[data-face='dark'] {
+  --face-bg: #17141c;
+  --face-bar: #2f2839;
+  --face-bubble: #272031;
+  --face-mine: var(--i-accent);
+  --face-composer: #201b29;
+}
+
+.instrument__face-bar {
+  height: 3px;
+  background: var(--face-bar);
+  border-radius: 2px;
+}
+
+.instrument__face-bubble {
+  width: 70%;
+  height: 6px;
+  background: var(--face-bubble);
+  border-radius: 3px;
+}
+
+.instrument__face-bubble--mine {
+  width: 45%;
+  margin-left: auto;
+  background: var(--face-mine);
+}
+
+.instrument__face-composer {
+  height: 7px;
+  margin-top: auto;
+  background: var(--face-composer);
+  border: 1px solid var(--face-bar);
+  border-radius: 3px;
+}
+
+/* "System" is both of them, split on the diagonal. */
+.instrument__face--split {
+  display: block;
+  padding: 0;
+  background: none;
+}
+
+.instrument__face--split > .instrument__face {
+  position: absolute;
+  inset: 0;
+  aspect-ratio: auto;
+}
+
+.instrument__face--clipped {
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+}
+
+/* ── 4 & 5. Cards: weights and choices ──────────────────────────────────────── */
+
+.instrument__cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.instrument__card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.55rem 1.75rem 0.55rem 0.75rem;
+  text-align: left;
+  background: var(--i-hull-lit);
+  border: 1px solid var(--i-seam);
+  border-left: 3px solid transparent;
+  border-radius: var(--i-radius);
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+
+.instrument__card:hover {
+  border-left-color: var(--i-accent);
+}
+
+.instrument__card.is-lit {
+  border-color: var(--i-thruster);
+  border-left-color: var(--i-thruster);
+}
+
+.instrument__card-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.instrument__card-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--i-ink);
+}
+
+.instrument__card--weights .instrument__card-title {
+  font-family: var(--i-mono);
+  font-weight: 500;
+}
+
+.instrument__card-desc {
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--i-ink-dim);
+}
+
+.instrument__bar {
+  display: block;
+  width: 100%;
+  height: 4px;
+  overflow: hidden;
+  background: var(--i-seam);
+  border-radius: 2px;
+}
+
+.instrument__bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--i-accent);
+  border-radius: 2px;
+  transition: background-color 140ms ease;
+}
+
+.is-lit .instrument__bar-fill {
+  background: var(--i-thruster);
+}
+
+/* ── 6. System prompt ───────────────────────────────────────────────────────── */
+
+.instrument__area {
+  width: 100%;
+  min-height: 5.5rem;
+  padding: 0.55rem 0.7rem;
+  font: inherit;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--i-ink);
+  resize: vertical;
+  background: var(--i-hull-lit);
+  border: 1px solid var(--i-seam);
+  border-radius: var(--i-radius);
+}
+
+.instrument__area:focus {
+  border-color: var(--i-accent);
+}
+
+/* ── 7. Language plates ─────────────────────────────────────────────────────── */
+
+/*
+ * `auto-fit` and not a media query, because the composer is the container and the
+ * viewport is not: this panel sits beside a live preview of the Space, and the window
+ * being wide says nothing about the room the plates have. Two side by side while they
+ * fit, one under the other when they do not.
+ */
+.instrument__plates {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.5rem;
+}
+
+/* "Both" is the sum of the two above it, and it is drawn as much: the full width, last. */
+.instrument__plate--both {
+  grid-column: 1 / -1;
+}
+
+.instrument__plate {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.7rem 1.9rem 0.75rem 0.85rem;
+  text-align: left;
+  background: var(--i-hull-lit);
+  border: 1px solid var(--i-seam);
+  border-radius: var(--i-radius);
+  transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+}
+
+.instrument__plate:hover {
+  border-color: var(--i-accent);
+  transform: translateY(-1px);
+}
+
+.instrument__plate.is-lit {
+  border-color: var(--i-thruster);
+  box-shadow: 0 0 0 1px var(--i-thruster);
+}
+
+.instrument__plate-line,
+.instrument__plate-samples {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.instrument__plate-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: baseline;
+}
+
+/* The name of the language: the display face, the one the product signs its own name in. */
+.instrument__endonym {
+  font-family: var(--i-display);
+  font-size: 1.125rem;
+  line-height: 1.15;
+  color: var(--i-ink);
+}
+
+.instrument__endonym-sep {
+  font-family: var(--i-display);
+  font-size: 1.125rem;
+  line-height: 1.15;
+  color: var(--i-ink-dim);
+}
+
+/* The sentence the conversation will sound like — the UI face, because that is the face
+   it will actually be written in. */
+.instrument__sample {
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--i-ink-dim);
+}
+
+.is-lit .instrument__sample {
+  color: var(--i-ink);
+}
+
+.instrument__plate-note {
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--i-ink-dim);
+}
+
+/* Dark glass, then live: the diode is the whole of "this one is the answer". */
+.instrument__diode {
+  position: absolute;
+  top: 0.7rem;
+  right: 0.7rem;
+  width: 9px;
+  height: 9px;
+  background: var(--i-hull);
+  border: 1px solid var(--i-seam);
+  border-radius: 50%;
+  transition: background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.is-lit .instrument__diode {
+  background: var(--i-thruster);
+  border-color: var(--i-thruster);
+  box-shadow: 0 0 0 3px rgb(255 62 0 / 22%);
+}
+
+/* ── Narrow ─────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 420px) {
+  .instrument__grid {
+    grid-template-columns: repeat(auto-fill, minmax(36px, 1fr));
+  }
+
+  .instrument__emoji {
+    min-height: 36px;
+  }
+
+  .instrument__themes {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* ── High contrast ──────────────────────────────────────────────────────────── */
+
+/*
+ * Forced colours replace every background and border, and "which one is chosen" is
+ * carried by exactly those here. The system's own Highlight puts it back — and the
+ * swatches keep their real colours, because a colour picker that shows none is not a
+ * colour picker.
+ */
+@media (forced-colors: active) {
+  .instrument .is-lit {
+    outline: 2px solid Highlight;
+    outline-offset: 1px;
+  }
+
+  .instrument__swatch,
+  .instrument__picker {
+    forced-color-adjust: none;
+  }
+}
+
+/* ── Motion is one idea, and it is optional ─────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .instrument,
+  .instrument *,
+  .instrument *::before,
+  .instrument *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  .instrument__swatch:hover,
+  .instrument__plate:hover {
+    transform: none;
+  }
+}
