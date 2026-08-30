@@ -47,6 +47,17 @@ export interface ModelScan {
    * Optional so a hand-built `ModelScan` stays valid.
    */
   onnxSizes?: Record<string, number>;
+  /**
+   * component → the dtypes that component is published in.
+   *
+   * A chat model is one graph and this says so — `{ model: ['q4', 'fp32'] }`. A vision
+   * model is SEVERAL graphs that load together, each with its own set of builds, and a
+   * loader has to be told which build of each to fetch. That is what
+   * `componentDtypes()` turns this into.
+   *
+   * Optional so a hand-built `ModelScan` stays valid; read it as `onnxComponents ?? {}`.
+   */
+  onnxComponents?: Record<string, string[]>;
   /** Inference provider names serving this model (empty = not served). */
   providers: string[];
   /** `image-text-to-text` & friends → the generated composer takes attachments. */
@@ -73,10 +84,44 @@ export function emptyScan(id: string): ModelScan {
     onnxFiles: [],
     onnxDtypes: [],
     onnxSizes: {},
+    onnxComponents: {},
     providers: [],
     supportsImage: false,
     error: null,
   };
+}
+
+/**
+ * Which build of each component to load, for one chosen precision.
+ *
+ * The rule is the one the weights are already counted with, and it is not arithmetic —
+ * it is what "choosing q4" MEANS for a model made of several graphs: every component in
+ * that dtype, and where a component was published in only one build, that build. An
+ * image tower shipped once is loaded by every variant; asking for a q4 of it would ask
+ * for a file that does not exist.
+ *
+ * Returns `null` when there is nothing to say — no components known, or the chosen dtype
+ * is not one the model offers. A caller with `null` should keep passing the plain string
+ * rather than invent a map.
+ */
+export function componentDtypes(
+  scan: Pick<ModelScan, 'onnxComponents'>,
+  dtype: string,
+): Record<string, string> | null {
+  const components = scan.onnxComponents ?? {};
+  const names = Object.keys(components);
+  if (names.length === 0) return null;
+
+  const map: Record<string, string> = {};
+  for (const name of names) {
+    const built = components[name] ?? [];
+    if (built.includes(dtype)) map[name] = dtype;
+    else if (built.length === 1 && built[0]) map[name] = built[0];
+    // A component with several builds and none of them the chosen dtype: we do not know
+    // which one belongs to this variant, so we name none and let the loader default.
+  }
+
+  return Object.keys(map).length > 0 ? map : null;
 }
 
 // —————————————————————————————————————————————————————————————————————————————

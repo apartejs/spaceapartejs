@@ -157,6 +157,7 @@ export async function scanModel(id: string, token?: string): Promise<ModelScan> 
   scan.onnxFiles = onnx.files;
   scan.onnxDtypes = onnx.dtypes;
   scan.onnxSizes = onnx.sizes;
+  scan.onnxComponents = onnx.components;
 
   return scan;
 }
@@ -186,9 +187,18 @@ interface OnnxFindings {
   dtypes: string[];
   /** dtype → total bytes; a dtype is absent unless every one of its files was measured. */
   sizes: Record<string, number>;
+  /**
+   * component → the dtypes that component is actually published in.
+   *
+   * The same decomposition the weights are counted from, kept instead of thrown away:
+   * a vision model is three graphs that load together (`embed_tokens`,
+   * `vision_encoder`, `decoder_model_merged`), and a loader has to be told which build
+   * of EACH to fetch. Only components with a real `.onnx` graph are in here.
+   */
+  components: Record<string, string[]>;
 }
 
-const noOnnx = (): OnnxFindings => ({ files: [], dtypes: [], sizes: {} });
+const noOnnx = (): OnnxFindings => ({ files: [], dtypes: [], sizes: {}, components: {} });
 
 function authHeaders(token?: string): Record<string, string> {
   return token && token.trim() ? { Authorization: `Bearer ${token.trim()}` } : {};
@@ -391,7 +401,15 @@ async function listOnnxFiles(id: string, headers: Record<string, string>): Promi
       if (measured && bytes > 0) sizes[dtype] = bytes;
     }
 
-    return { files, dtypes: ordered, sizes };
+    // Kept in the same order as `ordered` so a caller reading a component's builds sees
+    // them smallest-first, like everywhere else this product shows dtypes.
+    const components: Record<string, string[]> = {};
+    for (const [component, byDtype] of parts) {
+      const built = sortDtypes(new Set([...byDtype].filter(([, row]) => row.graph).map(([d]) => d)));
+      if (built.length > 0) components[component] = built;
+    }
+
+    return { files, dtypes: ordered, sizes, components };
   } catch {
     return noOnnx();
   }
