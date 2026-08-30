@@ -488,16 +488,21 @@
       <!-- Under the split's breakpoint these switch the visible pane; above it they
            change nothing on screen, so the same media query hides the group. The
            element handles the click itself, from the document; `aria-pressed` comes
-           back from the `pane` attribute it reflects. -->
+           back from the `pane` attribute it reflects.
+
+           NOT `--sm`, unlike the other groups in this product. The kit's small size is
+           a 19px-tall control, which is right for a dense desktop bar and wrong for the
+           one control that exists ONLY on a phone: this is how a visitor moves between
+           the chat and the preview, and it was a 19px target under a thumb. -->
       <div class="aparte-btn-group shell__panes" role="group" aria-label={t.header.panesLabel}>
         <button
-          class="aparte-btn aparte-btn--sm aparte-btn--surface"
+          class="aparte-btn aparte-btn--surface"
           type="button"
           aria-pressed={visiblePane === 'start'}
           data-aparte-split-pane="start">{t.header.paneChat}</button
         >
         <button
-          class="aparte-btn aparte-btn--sm aparte-btn--surface"
+          class="aparte-btn aparte-btn--surface"
           type="button"
           aria-pressed={visiblePane === 'end'}
           data-aparte-split-pane="end">{t.header.panePreview}</button
@@ -998,6 +1003,25 @@
   @media (max-width: 60rem) {
     .shell__panes {
       display: inline-flex;
+    }
+
+    /* The kit sizes a button from its padding: `--sm` came out 19px tall, which is fine
+       in a dense desktop bar and wrong for the only control that reaches the preview on
+       a phone. Two steps, because this group spans from a phone to a narrow desktop and
+       a single size is wrong at one end or the other. Here — pointer, room to spare —
+       32px, the kit's own default control size. */
+    .shell__panes :global(.aparte-btn) {
+      min-height: 2rem;
+      padding-inline: 0.7rem;
+    }
+  }
+
+  /* A thumb, not a pointer. 40px rather than the 44px the touch guidelines ask for: the
+     header is 52px tall, and 44 inside it leaves no air at all. */
+  @media (max-width: 40rem) {
+    .shell__panes :global(.aparte-btn) {
+      min-height: 2.5rem;
+      padding-inline: 0.75rem;
     }
 
     .shell__subtitle {
