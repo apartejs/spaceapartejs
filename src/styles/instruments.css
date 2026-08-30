@@ -60,35 +60,6 @@
 
 /* ── The question above the control ─────────────────────────────────────────── */
 
-/*
- * A gutter for the Skip control, which the panel pins to its own top-right corner with
- * `position: absolute; inset-inline-end: 0` and takes out of flow — over a message that
- * reserves nothing for it. Short built-in questions never reach the button; ours are
- * computed from the repo and run two lines ("This repo ships eight sizes of weights:
- * q4f16, q4, bnb4, int8, uint8, q8, fp16 and fp32…"), so the first line ran straight
- * under it. Seen in the browser, not reasoned about, and filed upstream — the overlap is
- * the library's own two elements, and this is a patch over it until it lands there.
- *
- * Two selectors because the panel prints ONE of two things first, and either can be the
- * one under the button:
- *
- * - the message, when the turn has one. Not scoped to `:has(.instrument)` any more: the
- *   collision belongs to the message and the button, and `ask_model` — a plain text
- *   field, no instrument of ours anywhere — collided exactly the same way.
- * - the first instrument's question, when the turn has NO message. The language question
- *   is the one that does this: its message would have printed the question a second time,
- *   so the field carries it alone and the field's title is now the top line.
- *
- * 4rem rather than the button's ~3.3rem because the button holds a WORD — `Skip` in
- * English, `Passer` in French, and whatever the next locale makes of it.
- */
-.aparte-elic-panel:has(.aparte-elic-dismiss) > .aparte-elic-message,
-.aparte-elic-panel:has(.aparte-elic-dismiss):not(:has(> .aparte-elic-message))
-  .aparte-elic-body
-  > .instrument:first-child
-  > .instrument__question {
-  padding-inline-end: 4rem;
-}
 
 /*
  * Two classes deep on purpose, and it is not decoration: the header also wears the
