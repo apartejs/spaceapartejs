@@ -8,7 +8,7 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { modesFor, scanModel } from './api';
-import { emptyScan, formatBytes } from './types';
+import { componentDtypes, emptyScan, formatBytes } from './types';
 
 // —————————————————————————————————————————————————————————————————————————————
 // Harness
@@ -801,5 +801,93 @@ describe('a repo whose every component ships in every dtype', () => {
 
     expect(scan.onnxDtypes).toEqual(['q4', 'q4f16', 'fp32']);
     expect(scan.supportsImage).toBe(true);
+  });
+});
+
+// ─── Which build of each part to load ────────────────────────────────────────
+
+describe('the components a model is made of', () => {
+  /**
+   * The decomposition the weights were already counted from, kept rather than thrown
+   * away. It became load-bearing when `provider-transformers` learned vision: its
+   * `registerModel` takes a dtype PER COMPONENT (`{ embed_tokens: 'fp16',
+   * vision_encoder: 'q4', … }`), because a vision model is several graphs that load
+   * together, each published in its own set of builds.
+   */
+  it('reports each part and the builds it exists in', async () => {
+    install({
+      model: json({ id: 'acme/vlm', pipeline_tag: 'image-text-to-text' }),
+      tree: json([
+        { type: 'file', path: 'onnx/decoder_model_merged_q4.onnx', size: 1_000 },
+        { type: 'file', path: 'onnx/decoder_model_merged_fp16.onnx', size: 4_000 },
+        { type: 'file', path: 'onnx/embed_tokens_q4.onnx', size: 500 },
+        { type: 'file', path: 'onnx/embed_tokens_fp16.onnx', size: 900 },
+        { type: 'file', path: 'onnx/vision_encoder.onnx', size: 2_000 },
+      ]),
+    });
+    const scan = await scanModel('acme/vlm');
+
+    expect(scan.onnxComponents).toEqual({
+      decoder_model_merged: ['q4', 'fp16'],
+      embed_tokens: ['q4', 'fp16'],
+      // Published once, with no dtype suffix: `splitOnnxName` reads that as fp32.
+      vision_encoder: ['fp32'],
+    });
+  });
+
+  it('names no build for a part that has none — a stray sidecar is not a build', async () => {
+    install({
+      model: json({ id: 'acme/orphan', pipeline_tag: 'text-generation' }),
+      tree: json([
+        { type: 'file', path: 'onnx/model_q4.onnx', size: 1_000 },
+        // A sidecar whose graph is not in the repo: it weighs something and loads nothing.
+        { type: 'file', path: 'onnx/model_q8.onnx_data', size: 9_000 },
+      ]),
+    });
+    const scan = await scanModel('acme/orphan');
+
+    expect(scan.onnxComponents).toEqual({ model: ['q4'] });
+  });
+});
+
+describe('componentDtypes', () => {
+  const scan = {
+    onnxComponents: {
+      decoder_model_merged: ['q4', 'fp16'],
+      embed_tokens: ['q4', 'fp16'],
+      vision_encoder: ['fp32'],
+    },
+  };
+
+  it('asks for the chosen build of every part that has one', () => {
+    expect(componentDtypes(scan, 'q4')).toEqual({
+      decoder_model_merged: 'q4',
+      embed_tokens: 'q4',
+      // One build only, so that is what a q4 variant loads — asking for a q4 of it
+      // would ask for a file that does not exist.
+      vision_encoder: 'fp32',
+    });
+  });
+
+  it('is the same rule the sizes are counted with', () => {
+    expect(componentDtypes(scan, 'fp16')).toEqual({
+      decoder_model_merged: 'fp16',
+      embed_tokens: 'fp16',
+      vision_encoder: 'fp32',
+    });
+  });
+
+  it('says nothing rather than inventing a map', () => {
+    expect(componentDtypes({ onnxComponents: {} }, 'q4')).toBeNull();
+    expect(componentDtypes({}, 'q4')).toBeNull();
+    // A part with several builds and none of them the one asked for: we do not know
+    // which belongs to this variant, so it is left out and the loader defaults.
+    expect(componentDtypes({ onnxComponents: { a: ['q4', 'q8'] } }, 'fp16')).toBeNull();
+  });
+
+  it('handles the ordinary case — one part, one name', () => {
+    expect(componentDtypes({ onnxComponents: { model: ['q4', 'fp32'] } }, 'q4')).toEqual({
+      model: 'q4',
+    });
   });
 });

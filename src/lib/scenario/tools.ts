@@ -346,7 +346,17 @@ export function createConfiguratorTools(port: ConfiguratorPort): ConfiguratorToo
    */
   const applyScan = (scan: ModelScan, variants: string[]): void => {
     const patch: Partial<SpaceConfigWithWeights> = { modelId: scan.id, ...titlePatch(scan.id) };
-    if (scan.status === 'found') patch.attachments = scan.supportsImage;
+    if (scan.status === 'found') {
+      patch.attachments = scan.supportsImage;
+      // The same detection, kept as two facts on purpose: `attachments` is the composer,
+      // `vision` is the load path. A vision model registered as text does not load at
+      // all, so this one must survive a visitor turning attachments off.
+      patch.vision = scan.supportsImage;
+      // What each part of the model is published in — the generator turns it into the
+      // per-component dtype the loader wants. Written on every scan so a rescan cannot
+      // leave the previous model's parts behind.
+      patch.components = scan.onnxComponents ?? {};
+    }
     const smallest = smallestVariant(variants, scan.onnxSizes ?? {});
     if (smallest) patch.dtype = smallest;
     // Written on EVERY scan, including as `undefined` — never merely when known. A

@@ -47,7 +47,7 @@
 
 import { APARTE_VERSION, type SpaceConfig } from '../config/space-config';
 import type { Lang } from '../i18n/lang';
-import { formatBytes } from '../hub/types';
+import { componentDtypes, formatBytes } from '../hub/types';
 import { generateStyleCss, safeAccent } from './style-css';
 
 /**
@@ -75,6 +75,16 @@ import { generateStyleCss, safeAccent } from './style-css';
 export type SpaceConfigWithWeights = SpaceConfig & {
   downloadBytes?: number;
   creatorLang?: Lang;
+  /**
+   * component → the dtypes it is published in, straight from `ModelScan`.
+   *
+   * The RAW decomposition rather than a finished `{ component: dtype }` map, because the
+   * chosen precision can still change after the scan: carrying the answer would mean
+   * recomputing it on every `dtype` patch and getting one wrong eventually. The generator
+   * asks `componentDtypes()` at the moment it writes the file, once, from the dtype that
+   * is actually in the config by then.
+   */
+  components?: Record<string, string[]>;
 };
 
 // ── What the generated page says ───────────────────────────────────────────
@@ -338,6 +348,32 @@ function importMap(config: SpaceConfig): string {
   if (config.lang !== 'en') imports['@aparte/locale-fr'] = LOCALE_FR_URL;
 
   return JSON.stringify({ imports }, null, 2);
+}
+
+/**
+ * The `dtype` the generated page passes to `registerModel`.
+ *
+ * A chat model is one graph and takes one word: `"q4"`. A VISION model is several graphs
+ * that load together — `embed_tokens`, `vision_encoder`, `decoder_model_merged` — each
+ * published in its own set of builds, and the loader has to be told which build of each
+ * to fetch. So it takes a map, and the map is built with the SAME rule the download size
+ * is counted with: the chosen dtype for every part that has it, its only build for a part
+ * published once. Anything else would announce one number and fetch another.
+ *
+ * Falls back to the plain string whenever the parts are unknown — a hand-built config, a
+ * scan that never ran — rather than inventing a map from nothing.
+ */
+function dtypeLiteral(config: SpaceConfigWithWeights): string {
+  const map = componentDtypes({ onnxComponents: config.components }, config.dtype);
+  if (!map) return jsString(config.dtype);
+
+  const single = Object.keys(map);
+  // One component named exactly as the whole model: that IS the plain case, and a map
+  // of one is noise in a file people read.
+  if (single.length === 1 && single[0] === 'model') return jsString(config.dtype);
+
+  const entries = Object.entries(map).map(([part, dtype]) => `${jsString(part)}: ${jsString(dtype)}`);
+  return `{ ${entries.join(', ')} }`;
 }
 
 /**
@@ -693,9 +729,9 @@ function browserScript(config: SpaceConfig): string {
   registerModel({
     id: settings.model,
     name: settings.model.split('/').pop() || settings.model,
-    task: 'text-generation',
-    capabilities: ['streaming'],
-    dtype: ${jsString(config.dtype)},
+    task: ${config.vision ? "'image-text-to-text'" : "'text-generation'"},
+    capabilities: [${config.vision ? "'streaming', 'vision'" : "'streaming'"}],
+    dtype: ${dtypeLiteral(config)},
   });
 
   aparteGlobalConfig.registerAIProvider(TransformersProvider);

@@ -26,6 +26,17 @@ export interface SpaceConfig {
   greeting: string;
   /** File/image input in the composer. Set from detection, not asked. */
   attachments: boolean;
+  /**
+   * The MODEL reads images — which is not the same fact as `attachments`, and the two
+   * must not be collapsed.
+   *
+   * `attachments` is about the composer: may a visitor add a file. This is about the
+   * load path: a vision model is registered with `task: 'image-text-to-text'`, and
+   * registered as text it does not merely ignore images — it **does not load at all**
+   * ("Unsupported model type: lfm2_vl", seen in a browser). So turning attachments off
+   * must never turn this off with it, or the Space stops working entirely.
+   */
+  vision: boolean;
 
   // — Appearance and Space metadata —
   title: string;
@@ -65,6 +76,7 @@ export const DEFAULT_CONFIG: SpaceConfig = {
   systemPrompt: '',
   greeting: '',
   attachments: false,
+  vision: false,
   title: '',
   emoji: '🛸',
   theme: 'system',
