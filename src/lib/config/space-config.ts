@@ -49,7 +49,7 @@ export interface SpaceConfig {
 import type { SpaceLang } from '../i18n/lang';
 
 /** Pinned across the whole product: the generated Spaces live on without us. */
-export const APARTE_VERSION = '0.16.3';
+export const APARTE_VERSION = '0.16.4';
 
 /** The HF Inference Providers router — OpenAI-compatible. */
 export const HF_ROUTER_BASE_URL = 'https://router.huggingface.co/v1';
