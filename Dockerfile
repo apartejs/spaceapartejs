@@ -24,6 +24,23 @@ COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
 COPY . .
+
+# The Hugging Face OAuth app this deployment signs in with.
+#
+# A BUILD argument, not a runtime one: Vite inlines `VITE_*` into the bundle, so a value
+# handed to the container at start-up arrives far too late — the page would already have
+# been built without it, and the sign-in button would fall back to asking for a token by
+# hand. In Coolify this is a Build Variable, not an Environment Variable.
+#
+# Not a secret. An OAuth client id travels in the authorisation URL, in plain sight of
+# the person signing in; what must never be here is a token or a client secret.
+#
+# Absent, the build still succeeds and the product still works: `oauth.ts` falls back to
+# the paste-a-token path, which is the only one available on a domain with no app
+# registered anyway.
+ARG VITE_HF_CLIENT_ID=""
+ENV VITE_HF_CLIENT_ID=$VITE_HF_CLIENT_ID
+
 RUN pnpm build
 
 # ── Serve ──────────────────────────────────────────────────────────────────

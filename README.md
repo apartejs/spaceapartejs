@@ -64,6 +64,30 @@ docker build -t aparte-spaces . && docker run --rm -p 8080:80 aparte-spaces
 Nothing about the site itself involves Hugging Face — `space.apartejs.dev` is an ordinary
 static site. It is the **Spaces it generates** that live on the Hub.
 
+### Signing in to Hugging Face
+
+Pushing a generated Space to someone's account needs their authorisation, and there are
+two ways to get it. The configurator supports both, and picks whichever is available.
+
+**A token, pasted by hand** — works everywhere, needs no setup, and is the fallback.
+
+**OAuth**, which is the one worth having: one click, no token to copy. It needs a
+[Connected App](https://huggingface.co/settings/connected-applications) registered on
+Hugging Face, with the `openid profile read-repos write-repos` scopes and this site's URL
+as a redirect. Pass its client id at **build** time:
+
+```bash
+docker build --build-arg VITE_HF_CLIENT_ID=xxxxxxxx -t aparte-spaces .
+```
+
+Build time, not run time: Vite inlines `VITE_*` into the bundle, so a value handed to the
+container at start-up arrives after the page was built. In Coolify it goes in **Build
+Variables**. The client id is not a secret — it travels in the authorisation URL — but a
+token or a client secret must never be built in.
+
+Hosted as a Hugging Face Space instead, none of this applies: the Hub injects
+`OAUTH_CLIENT_ID` itself and the configurator reads it from the Space variables.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
